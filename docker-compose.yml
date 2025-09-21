@@ -1,0 +1,72 @@
+# version: "3.9"
+
+# services:
+#   redis:
+#     image: redis:7-alpine
+#     container_name: redis
+#     ports:
+#       - "6379:6379"
+
+#   chatbot:
+#     image: python:3.10-slim
+#     container_name: chatbot-gemma2
+#     working_dir: /app
+#     volumes:
+#       - .:/app
+#     command: bash -c "pip install --no-cache-dir torch gradio transformers huggingface_hub redis lmcache && python test.py"
+#     ports:
+#       - "7860:7860"
+#     environment:
+#       HF_TOKEN: ${HF_TOKEN}
+#       REDIS_HOST: redis
+#       REDIS_PORT: 6379
+#       REDIS_DB: 0
+#     deploy:
+#       resources:
+#         reservations:
+#           devices:
+#             - driver: nvidia
+#               count: all
+#               capabilities: [gpu]
+
+name: redis-stack
+
+services:
+  redis:
+    image: redis:alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - chatbot-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: redis-insight
+    ports:
+      - "5540:5540"
+    volumes:
+      - redis-insight-data:/data
+    depends_on:
+      - redis
+    networks:
+      - chatbot-net
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+    driver: local
+  redis-insight-data:
+    driver: local
+
+networks:
+  chatbot-net:
+    driver: bridge

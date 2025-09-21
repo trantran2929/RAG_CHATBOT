@@ -1,11 +1,17 @@
-transformers>=4.44.2
-accelerate>=0.34.2
-huggingface_hub>=0.23.0
-python-dotenv>=1.0.1
-redis>=5.0.1
-langdetect>=1.0.9
-langgraph>=0.0.56
-langchain-core>=0.2.0
-streamlit==1.39.0
-scikit-learn
+# Transformers & Sentence Transformers
+transformers
+sentence-transformers
+
+# Vector DB & cache
 qdrant-client
+redis
+
+# Streamlit UI
+streamlit
+
+# Utils
+langdetect
+python-dotenv
+huggingface-hub
+
+# pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128
