@@ -14,39 +14,54 @@ class GlobalState:
     session_id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     # Input gốc từ người dùng
-    raw_query: str = ""
+    user_query: str = ""
 
     # Query sau khi xử lý (clean, detect ngôn ngữ... )
-    clean_query: str = ""
+    processed_query: str = ""
 
     # Ngôn ngữ detect
     lang: str = "unknown"
 
+    # khóa để check Redis cache
+    cache_key: str = ""
+
+    # Đánh dấu nếu lấy từ redis
+    from_cache: bool = False
+
     # Vector embedding cho processed_query
     query_embedding: Optional[List[float]] = None
 
-    # Kết quả tìm kiếm trong vector DB (chỉ ID + score)
+    # Kết quả tìm kiếm trong vector DB (ID + score)
     search_results: List[Dict[str, Any]] = field(default_factory=list)
 
-    # Tài liệu thực tế được lấy từ retriever
+    # Docs thực tế được lấy từ retriever
     retrieved_docs: List[Dict[str, Any]] = field(default_factory=list)
 
     # Context được tổng hợp (snippets gộp lại)
     context: str = ""
+
+    # Few-shot
+    examples: List[Dict[str,str]] = field(default_factory=list)
+
+    role: str = ""
     
     # Prompt đã được build cho LLM
     prompt: str = ""
-
-    # Final Answer từ LLM
-    final_answer: str = ""
 
     # Toàn bộ messages trong hội thoại hiện tại
     # Format: [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
     messages: List[Dict[str, str]] = field(default_factory=list, metadata={"reducer": add_messages})
 
-    # Hội thoại trước đó (lấy từ Redis memory)
+    # Lịch sử hội thoại
     conversation_history: List[Dict[str, str]] = field(default_factory=list)
 
+    # Final Answer từ LLM
+    llm_output: str = ""
+    final_answer: str = ""
+
+    # Resonse cuối cùng trước khi thêm vào cached
+    response: str = ""
+    
     # Thông tin debug/tracking
     debug_info: Dict[str, Any] = field(default_factory=dict)
 

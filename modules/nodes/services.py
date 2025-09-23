@@ -20,9 +20,13 @@ os.environ['TORCHDYNAMO_DISABLE'] = '1'
 torch._dynamo.config.suppress_errors = True 
 
 class QdrantServices:
-    def __init__(self, host='localhost', port=6333, collection_name="collection",vector_size=384):
-        self.client= QdrantClient(host=host, port=port)
+    def __init__(self, collection_name="collection", vector_size=384):
+        host = os.getenv("QDRANT_HOST", "localhost")
+        port = int(os.getenv("QDRANT_PORT", 6333))
+
+        self.client = QdrantClient(host=host, port=port)
         self.collection_name = collection_name
+
         # Kiểm tra collection
         collections = [c.name for c in self.client.get_collections().collections]
         if self.collection_name not in collections:
@@ -33,11 +37,21 @@ class QdrantServices:
             )
         else:
             print(f"Collection `{self.collection_name}` đã tồn tại.")
+
+
 qdrant_services = QdrantServices()
+
+
 class RedisCacheServices:
-    def __init__(self, host='localhost', port=6379, db=0):
-        self.client = redis.Redis(host=host,port=port,db=db)
+    def __init__(self, db=0):
+        host = os.getenv("REDIS_HOST", "localhost")
+        port = int(os.getenv("REDIS_PORT", 6379))
+
+        self.client = redis.Redis(host=host, port=port, db=db, decode_responses=True)
+
+
 redis_services = RedisCacheServices()
+
 
 class LLMServices:
     def __init__(self, model_id = "google/gemma-3-1b-it"):

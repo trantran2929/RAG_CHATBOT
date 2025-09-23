@@ -1,56 +1,63 @@
 import json
+from modules.core.state import GlobalState
 from .services import redis_services
 
+CACHE_TTL = 3600
 
-def load_memory(state):
+def load_cache(state: GlobalState) -> GlobalState:
     """
-    Load lịch sử hội thoại từ Redis bằng state.conversation_history.
+    Load lịch sử hội thoại từ Redis vào state.conversation_history.
+    Sử dụng consistent key format với Streamlit app.
     """
-    if not getattr(state, "session_id", None):
-        state.session_id = "default_session"
-
-    redis_client = redis_services.client
-    key = f"chat:{state.session_id}"
-
-    cached = redis_client.get(key)
+    if not state.session_id:
+        return state
+    
+    cache_key = f"chat:{state.session_id}"
+    cached = redis_services.client.get(cache_key)
     if cached:
         try:
-            state.conversation_history = json.loads(cached)
-        except Exception:
+            data = json.loads(cached)
+            # Handle cả 2 format:
+            # Format 1: Streamlit format - list of messages
+            if isinstance(data, list):
+                state.conversation_history = data
+                state.from_cache = True
+                
+            # Format 2: LangGraph format - dict với history
+            elif isinstance(data, dict) and "history" in data:
+                state.conversation_history = data.get("history", [])
+                state.from_cache = True
+                
+            else:
+                state.conversation_history = []
+                state.from_cache = False
+                
+        except json.JSONDecodeError:
             state.conversation_history = []
+            state.from_cache = False
     else:
         state.conversation_history = []
-
-    return state
-
-
-def save_memory(state, TTL=3600):
-    """
-    Thêm state.messages và final_answer vào conversation_history và lưu.
-    """
-    if not getattr(state, "session_id", None):
-        state.session_id = "default_session"
-
-    redis_client = redis_services.client
-    key = f"chat:{state.session_id}"
-
-    history = getattr(state, "conversation_history", [])
-    # Thêm tin nhắn hiện tại vào state.messages
-    for m in state.messages:
-        if m not in history:
-            history.append(m)
-
-    if state.final_answer:
-        history.append({"role":"assistant", "content": state.final_answer})
+        state.from_cache = False
     
-    try:
-        redis_client.set(
-            key,
-            json.dumps(history, ensure_ascii=False),
-            ex=TTL
-        )
-    except Exception as e:
-        print(f"[memory.save] Redis error: {e}")
-    state.conversation_history = history
     return state
 
+
+def save_cache(state: GlobalState) -> GlobalState:
+    """
+    Lưu conversation_history vào Redis cache.
+    (Không append thêm vì đã được update ở response node)
+    """
+    if not state.session_id:
+        return state
+    
+    cache_key = f"chat:{state.session_id}"
+    # cached_data = {
+    #     "history": state.conversation_history,
+    #     "final_answer": state.final_answer
+    # }
+    redis_services.client.setex(
+        cache_key,
+        CACHE_TTL,
+        json.dumps(state.conversation_history, ensure_ascii=False)
+    )
+    return state

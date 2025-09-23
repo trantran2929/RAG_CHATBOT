@@ -1,35 +1,42 @@
 # RAG_CHATBOT
 
-rag_project/
-│── main.py
-│── requirements.txt
-│
-├── ui/
-│   └── app.py                  # Streamlit UI
-│
-├── modules/
-│   ├── core/               # Điều phối (graph + state)
-│   │   ├── graph.py
-│   │   └── state.py
-│   │
-│   ├── nodes/                  # Các bước xử lý RAG
-│   │   ├── cache.py
-│   │   ├── processor.py        # Xử lý query (detect ngôn ngữ, clean)
-│   │   ├── embedder.py         # Embedding
-│   │   ├── vector_db.py        # Knowledge base + similarity search
-│   │   ├── retriever.py        # Lấy snippets từ vector DB
-│   │   ├── prompt_builder.py   # Xây prompt động
-│   │   ├── response_generator.py   # Wrapper LLM backend
-│   │   ├── sevices.py
-│   │   └── response.py         # Hàm chatbot_response (tích hợp RAG)
-│   │
-│   └── utils/                  # Tiện ích chung
-│       ├── debug.py
-│       └── logger.py (tùy chọn)
-│
-└── data/
-    └── documents.json          # Knowledge base
-
+rag_project/ <br>
+│── docker-compose.yml <br>
+│── requirements.txt <br>
+│    <br>
+├── ui/      <br>              
+│   └── app.py <br>
+│    <br>
+├── modules/ <br>
+│   ├── core/ <br>
+│   │   ├── graph.py <br>
+│   │   └── state.py     <br>
+│   │     <br>
+│   ├── nodes/ <br>
+│   │   ├── cache.py     <br>
+│   │   ├── processor.py      <br>
+│   │   ├── embedder.py       <br>
+│   │   ├── vector_db.py      <br>
+│   │   ├── retriever.py      <br>
+│   │   ├── prompt_builder.py      <br>
+│   │   ├── response_generator.py       <br>
+│   │   ├── response.py       <br>
+│   │   └── services.py       <br>
+│   │     <br>
+│   ├── ingestion/              # service ingestion chạy trong container   <br>
+│   │   ├── Dockerfile        <br>
+│   │   ├── crawler.py        <br>
+│   │   ├── preprocess.py          <br>
+│   │   ├── loader.py         <br>
+│   │   └── scheduler.py        # optional: chạy loop/celery/cron     <br>
+│   │     <br>
+│   └── utils/      <br>
+│       ├── debug.py          <br>
+│       └── logger.py         <br>
+│         <br>
+└── data/      <br>
+    └── documents.json   <br>
+       
 # WORKFLOW
 
 [User Input]
@@ -38,7 +45,7 @@ rag_project/
 [Processor] ──► Clean & Normalize ──► Detect Language
      │
      ▼
-[Check Short Greeting?] ──► Yes ──► Return canned response ("Xin chào") ──┐
+
      │                                                                   │
      ▼                                                                   │
      No                                                                  │

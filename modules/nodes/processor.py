@@ -64,7 +64,7 @@ class Processor:
         """
         update state.clean_query và state.lang
         """
-        query = state.raw_query
+        query = state.user_query
         query = self.normalize(query)
         lang = self.detect_language(query)
         query = self.translate_if_needed(query, lang)
@@ -73,14 +73,8 @@ class Processor:
         if vocab:
             query = self.correct_typo(query, vocab)
         
-        state.clean_query = query
+        state.processed_query = query
         state.lang = lang
-
-        # simple shortcut logic: if short greeting, mark skip_retrieval
-        if query in ("xin chào", "xin chao", "chào", "chao", "hello", "hi", "hey"):
-            state.skip_retrieval = True
-        else:
-            state.skip_retrieval = False
 
         return state
     

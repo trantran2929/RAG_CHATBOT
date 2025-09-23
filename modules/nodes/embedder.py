@@ -1,20 +1,23 @@
 import torch
 from .services import embedder_services
 from modules.utils.debug import add_debug_info
+from modules.core.state import GlobalState
 
 class EmbedderNode:
 
     @staticmethod
-    def get_embedding(state):
+    def get_embedding(state: GlobalState)->GlobalState:
         """
-        Tính embedding cho state.clean_query
+        Tính embedding cho processed_query và lưu vào state.query_embedding
         """
-        texts = state.clean_query or state.raw_query or ""
+        texts = state.processed_query or state.user_query or ""
         if isinstance(texts, str):
-            texts = [texts]
+            text = [texts]
+        else:
+            text = texts
 
         inputs = embedder_services.tokenizer(
-            texts,
+            text,
             return_tensors="pt", 
             truncation=True, 
             padding=True
@@ -29,8 +32,8 @@ class EmbedderNode:
         if embedding.shape[0] == 1:
             embedding = embedding[0]
 
-        state.query_embedding = embedding
-        add_debug_info(state, "embedding_shape", embedding.shape)
+        state.query_embedding = embedding.tolist()
+        add_debug_info(state, "embedding_shape", str(embedding.shape))
         return state
     
 embedder_instance = EmbedderNode()

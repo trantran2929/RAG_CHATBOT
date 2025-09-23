@@ -1,39 +1,34 @@
+from modules.core.state import GlobalState
 from modules.utils.debug import add_debug_info
 
-def retrieve_documents(state, top_k: int = 2):
+
+def retrieve_documents(state: GlobalState) -> GlobalState:
     """
-    Chuyển đổi state.search_results -> state.retrieved_docs
-    thành danh sách dict {id, score, text, version, timestamp}
+    Lấy documents (payload) từ Qdrant search_results
+    và tổng hợp lại context.
     """
-    search_results = getattr(state, "search_results", None)
-    if not search_results:
+    if not state.search_results:
         state.retrieved_docs = []
-        add_debug_info(state, "retrieved_docs_count", 0)
+        state.context = ""
+        add_debug_info(state, "retriever", "Không có tài liệu nào được tìm thấy")
         return state
 
-    # Lấy top_k kết quả
-    top_results = search_results[:top_k]
-
     docs = []
-    for r in top_results:
-        payload = getattr(r, "payload", {}) or {}
+    context_parts = []
 
-        # Ưu tiên lấy text từ các field khác nhau
-        text = (
-            payload.get("text")
-            or payload.get("content")
-            or payload.get("doc")
-            or ""
-        )
+    for hit in state.search_results:
+        payload = hit.get("payload", {})
+        content = payload.get("content", "")
 
-        docs.append({
-            "id": getattr(r, "id", None),
-            "score": getattr(r, "score", None),
-            "text": text,
-            "version": payload.get("version"),
-            "timestamp": payload.get("timestamp"),
-        })
+        if content:
+            docs.append(payload)
+            context_parts.append(content)
 
+    # cập nhật state
     state.retrieved_docs = docs
-    add_debug_info(state, "retrieved_docs_count", len(docs))
+    state.context = "\n".join(context_parts)
+
+    add_debug_info(state, "retriever_docs", len(docs))
+    add_debug_info(state, "retriever_context_len", len(state.context))
+
     return state
