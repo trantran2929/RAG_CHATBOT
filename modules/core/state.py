@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 from langgraph.graph.message import add_messages
-import uuid
+import uuid, time
 
 
 @dataclass
@@ -22,6 +22,14 @@ class GlobalState:
     # Ngôn ngữ detect
     lang: str = "unknown"
 
+    role: str = ""
+
+    # Chế độ trả lời (general, math_step_by_step, translation, code_generation)
+    mode: str = "general"
+
+    # Thời điểm query (timestamp)
+    timestamp: float = field(default_factory=time.time)
+
     # khóa để check Redis cache
     cache_key: str = ""
 
@@ -29,7 +37,7 @@ class GlobalState:
     from_cache: bool = False
 
     # Vector embedding cho processed_query
-    query_embedding: Optional[List[float]] = None
+    query_embedding: Optional[Dict[str, Any]] = None
 
     # Kết quả tìm kiếm trong vector DB (ID + score)
     search_results: List[Dict[str, Any]] = field(default_factory=list)
@@ -42,8 +50,6 @@ class GlobalState:
 
     # Few-shot
     examples: List[Dict[str,str]] = field(default_factory=list)
-
-    role: str = ""
     
     # Prompt đã được build cho LLM
     prompt: str = ""
@@ -56,6 +62,7 @@ class GlobalState:
     conversation_history: List[Dict[str, str]] = field(default_factory=list)
 
     # Final Answer từ LLM
+    raw_response: str = ""  # Output gốc của LLM
     llm_output: str = ""
     final_answer: str = ""
 

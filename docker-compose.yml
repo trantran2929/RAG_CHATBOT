@@ -45,31 +45,12 @@ services:
       - QDRANT__SERVICE__GRPC_PORT=6334
       - QDRANT__WEB_UI__ENABLED=true
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/collections"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:6333/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
     restart: unless-stopped
-  
-  ingestion:
-    build: 
-      context: .
-      dockerfile: modules/ingestion/Dockerfile
-    container_name: ingestion
-    volumes:
-      - ./data:/app/data
-    environment:
-      - QDRANT_HOST=qdrant
-      - QDRANT_PORT=6333
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - HF_TOKEN=${HF_TOKEN}
-    depends_on:
-      - qdrant
-      - redis
-    networks:
-      - chatbot-net
-    restart: unless-stopped
+
 volumes:
   redis_data:
     driver: local

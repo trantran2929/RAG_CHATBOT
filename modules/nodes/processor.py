@@ -16,19 +16,19 @@ class Processor:
         self.synonyms = synonyms or {}
         self.stopwords = stopwords or []
 
-    # Làm sạch và chuẩn hóa
     def normalize(self, text: str) -> str:
-        text = unicodedata.normalize("NFC", text)   # chuẩn hóa Unicode
-        text = re.sub(r"[^\w\s]", " ", text)        # bỏ ký tự đặc biệt
-        text = re.sub(r"\s+", " ", text).strip()    # xóa khoảng trắng thừa
+        text = unicodedata.normalize("NFC", text)
+        text = re.sub(r"[^0-9a-zA-ZÀ-ỹ\s]", " ", text)  # giữ full chữ có dấu
+        text = re.sub(r"\s+", " ", text).strip()
         return text.lower()
 
-    # Phát hiện ngôn ngữ 
     def detect_language(self, text: str) -> str:
         try:
-            return detect(text)
+            lang = detect(text)
+            return lang
         except:
-            return "unknown"
+            return self.target_lang
+
 
     # Dịch (placeholder)
     def translate_if_needed(self, text: str, lang: str) -> str:
