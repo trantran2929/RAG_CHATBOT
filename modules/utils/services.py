@@ -37,11 +37,6 @@ class QdrantServices:
                     "dense_vector": models.VectorParams(
                         size=vector_size,
                         distance=models.Distance.COSINE,
-                    ),
-                    "binary": models.VectorParams(
-                        size=vector_size,
-                        distance=models.Distance.DOT,
-                        on_disk=True
                     )
                 },
                 sparse_vectors_config={
@@ -69,10 +64,13 @@ class LLMServices:
         self.model = AutoModelForCausalLM.from_pretrained(
             model_id,
             device_map="auto",
-            torch_dtype=torch.float32,
-            trust_remote_code=True
+            torch_dtype=torch.float16,
+            trust_remote_code=True,
+            low_cpu_mem_usage=True,
+            offload_folder="offload",
+            offload_buffers=True
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
         self.generator = pipeline(
             "text-generation",
             model=self.model,
@@ -133,10 +131,5 @@ class EmbedderServices:
         #score tương ứng
         values = [s for s in scores if s>0]
         return {"indices":indices, "values":values}
-    
-    def encode_binary(self, dense_vec, threshold=0.0):
-        arr = np.array(dense_vec)
-        binary = (arr>threshold).astype(int).tolist()
-        return binary
 
 embedder_services = EmbedderServices()

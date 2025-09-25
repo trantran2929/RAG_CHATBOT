@@ -1,5 +1,4 @@
 # RAG_CHATBOT
-
 rag_project/ <br>
 │── docker-compose.yml <br>
 │── requirements.txt <br>
@@ -13,17 +12,16 @@ rag_project/ <br>
 │   │   └── state.py     <br>
 │   │     <br>
 │   ├── nodes/ <br>
-│   │   ├── cache.py     <br>
-│   │   ├── processor.py      <br>
+│   │   ├── cache.py          # Lưu lịch sử hội thoại  <br> 
+│   │   ├── processor.py      # Tiền xử lý <br>
 │   │   ├── embedder.py       <br>
 │   │   ├── vector_db.py      <br>
 │   │   ├── retriever.py      <br>
 │   │   ├── prompt_builder.py      <br>
 │   │   ├── response_generator.py       <br>
 │   │   ├── response.py       <br>
-│   │   └── services.py       <br>
 │   │     <br>
-│   ├── ingestion/              # service ingestion chạy trong container   <br>
+│   ├── ingestion/              # crawl và xử lý dữ liệu   <br>
 │   │   ├── Dockerfile        <br>
 │   │   ├── crawler.py        <br>
 │   │   ├── preprocess.py          <br>
@@ -32,7 +30,9 @@ rag_project/ <br>
 │   │     <br>
 │   └── utils/      <br>
 │       ├── debug.py          <br>
-│       └── logger.py         <br>
+│       ├── logger.py         <br>
+|       ├── qdrant_ultils.py  <br>
+│       └── services.py       <br>
 │         <br>
 └── data/      <br>
     └── documents.json   <br>
@@ -76,13 +76,6 @@ rag_project/ <br>
      ▼
 [Response] ──► Return to user & append to Redis conversation history
      │
-     ▼
-[Vector DB: Store if new question] ──► Only if:
-     │    - Not a short greeting
-     │    - Not duplicate (cosine similarity below threshold)
-     │    - Assign version + timestamp
-     │    - Convert vector → list
-     │    - Type = "knowledge"
      ▼
 [End]
 

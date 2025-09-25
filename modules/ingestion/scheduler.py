@@ -1,7 +1,7 @@
 # modules/ingestion/scheduler.py
 import time
 import traceback
-from modules.ingestion.crawler import crawl_cafef
+from modules.ingestion.crawler import crawl_cafef_stock
 from modules.ingestion.preprocess import preprocess_articles
 from modules.ingestion.loader import load_to_vector_db
 
@@ -13,7 +13,7 @@ def run_scheduler(
     while True:
         try:
             print("\n[Ingestion] Update news...")
-            raw_articles = crawl_cafef(max_page=max_page)
+            raw_articles = crawl_cafef_stock(max_page=max_page)
             print(f"[Ingestion] Crawled {len(raw_articles)} raw articles")
 
             if not raw_articles:

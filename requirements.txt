@@ -15,5 +15,7 @@ python-dotenv
 huggingface-hub
 
 beautifulsoup4
+bitsandbytes
+timm
 
 # pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128

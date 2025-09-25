@@ -30,9 +30,9 @@ def load_to_vector_db(docs: List[Dict], collection_name: str = None) -> int:
                 "title": doc.get("title", ""),
                 "time": doc.get("time", ""),
                 "summary": doc.get("summary", ""),
-                "url": doc.get("url", ""),      # ✅ sửa link -> url
+                "url": doc.get("url", ""),     
                 "content": doc.get("content", ""),
-                "source": doc.get("source", "cafef")  # ✅ thêm source
+                "source": doc.get("source", "cafef")  
             },
         })
 

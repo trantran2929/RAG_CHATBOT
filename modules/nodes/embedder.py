@@ -9,7 +9,13 @@ def embed_query(state: GlobalState)->GlobalState:
 
     dense_vec = embedder_services.encode_dense([query])[0]
 
+    try:
+        sparse_vec = embedder_services.encode_sparse([query])
+    except Exception:
+        sparse_vec = None
+
     state.query_embedding = {
         "dense_vector": dense_vec,
+        "sparse_vector": sparse_vec,
     }
     return state
