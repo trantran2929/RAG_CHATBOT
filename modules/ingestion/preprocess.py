@@ -1,5 +1,6 @@
 import re
 import unicodedata
+import hashlib
 from typing import List, Dict
 
 
@@ -18,17 +19,24 @@ def clean_text(text: str) -> str:
     return text
 
 
-def chunk_text(text: str, max_words: int = 200) -> List[str]:
-    """Chia nhỏ văn bản thành các chunk có tối đa max_words từ."""
+def chunk_text(text: str, max_words: int = 200, overlap: float = 0.2) -> List[str]:
+    """
+    chia nhỏ văn bản thành các chunk bằng sliding window.
+    max_words: số từ tối đa mỗi chunk
+    overlap: số từ overlap giữa các chunk liên tiếp (0.2)
+    """
     words = text.split()
-    chunks, cur = [], []
-    for w in words:
-        cur.append(w)
-        if len(cur) >= max_words:
-            chunks.append(" ".join(cur))
-            cur = []
-    if cur:
-        chunks.append(" ".join(cur))
+    if not words:
+        return []
+    step = int(max_words * (1 - overlap))
+    if step <= 0:
+        step = max_words
+    chunks = []
+    for i in range(0, len(words), step):
+        chunk = words[i:i + max_words]
+        chunks.append(" ".join(chunk))
+        if i + max_words >= len(words):
+            break
     return chunks
 
 
@@ -39,15 +47,22 @@ def preprocess_articles(articles: List[Dict], max_words: int = 200) -> List[Dict
     """
     docs = []
     for art in articles:
-        cleaned = clean_text(art.get("content", ""))
+        raw_id = art.get("id")
+        title = art.get("title", "").strip()
+        content = art.get("content", "").strip()
+        cleaned = clean_text(content)
         if not cleaned:
             continue
-
+        
+        # fallback ID
+        if not raw_id:
+            hash_id = hashlib.md5((title + content).encode("utf-8")).hexdigest()[:8]
+            raw_id = f"cafef_{hash_id}"
         chunks = chunk_text(cleaned, max_words=max_words)
         for idx, chunk in enumerate(chunks):
             docs.append({
-                "id": f"cafef_{art['id']}_{idx}",   # id unique cho từng chunk
-                "title": art.get("title", ""),
+                "id": f"cafef_{raw_id}_{idx}",   # id unique cho từng chunk
+                "title": title,
                 "time": art.get("time", ""),
                 "summary": art.get("summary", ""),
                 "url": art.get("url", ""),

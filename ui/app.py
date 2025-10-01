@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from modules.core.graph import build_graph
 from modules.core.state import GlobalState
 from modules.utils.services import redis_services
+from modules.nodes.prompt_builder import build_prompt
 
 # UI CONFIG
 st.set_page_config(page_title="Chatbot AI", layout="wide")
@@ -22,7 +23,11 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
-
+# if "init_prompt_done" not in st.session_state:
+#     init_state = GlobalState(session_id=st.session_state.session_id)
+#     init_state = build_prompt(init_state)
+#     print(init_state.prompt)
+#     st.session_state.init_prompt_done = True
 # SIDEBAR 
 with st.sidebar:
     st.subheader("⚙️ Tùy chọn")
@@ -111,10 +116,22 @@ if user_input := st.chat_input("💬 Nhập tin nhắn của bạn..."):
     user_msg = {"role": "user", "content": user_input}
     st.session_state.chat_history.append(user_msg)
 
+    history_from_cache = []
+    cached = redis_services.client.get(key)
+    if cached:
+        try:
+            loaded_data = json.loads(cached)
+            if isinstance(loaded_data, list):
+                history_from_cache = loaded_data
+            elif isinstance(loaded_data, dict) and "history" in loaded_data:
+                history_from_cache = loaded_data.get("history", [])
+        except:
+            history_from_cache = []
     state = GlobalState(
         user_query=user_input,
         session_id=st.session_state.session_id,
-        messages=st.session_state.chat_history.copy()
+        messages=[],
+        conversation_history=history_from_cache
     )
 
     with st.chat_message("assistant"):

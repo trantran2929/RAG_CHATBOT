@@ -1,5 +1,5 @@
 # Transformers & Sentence Transformers
-transformers
+transformers==4.56.2
 sentence-transformers
 
 # Vector DB & cache
@@ -17,5 +17,7 @@ huggingface-hub
 beautifulsoup4
 bitsandbytes
 timm
-
+rank_bm25
+unsloth
+langgraph
 # pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128

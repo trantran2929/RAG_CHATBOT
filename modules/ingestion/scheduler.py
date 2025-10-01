@@ -7,13 +7,12 @@ from modules.ingestion.loader import load_to_vector_db
 
 def run_scheduler(
     interval: int = 3600,
-    max_page: int = 2,
     collection_name: str = "cafef_articles",
 ):
     while True:
         try:
             print("\n[Ingestion] Update news...")
-            raw_articles = crawl_cafef_stock(max_page=max_page)
+            raw_articles = crawl_cafef_stock()
             print(f"[Ingestion] Crawled {len(raw_articles)} raw articles")
 
             if not raw_articles:

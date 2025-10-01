@@ -30,7 +30,7 @@ class QdrantServices:
 
         collections = [c.name for c in self.client.get_collections().collections]
         if self.collection_name not in collections:
-            print(f"Tạo mới collection `{self.collection_name}` (hybrid dense+sparse)")
+            print(f"Tạo mới collection `{self.collection_name}`")
             self.client.recreate_collection(
                 collection_name=self.collection_name,
                 vectors_config={
@@ -66,18 +66,18 @@ class LLMServices:
             device_map="auto",
             torch_dtype=torch.float16,
             trust_remote_code=True,
-            low_cpu_mem_usage=True,
+            # low_cpu_mem_usage=True,
             offload_folder="offload",
             offload_buffers=True
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
         self.generator = pipeline(
             "text-generation",
             model=self.model,
             tokenizer=self.tokenizer,
             max_new_tokens=256,
             do_sample=True,
-            temperature=0,
+            temperature=0.7,
             return_full_text=False,
             repetition_penalty=1.2
         )
@@ -98,6 +98,7 @@ class EmbedderServices:
             device=None
         ):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        print("EmbedderServices device:", self.device)
         # Dense encoder
         self.dense_tokenizer = AutoTokenizer.from_pretrained(dense_model_name)
         self.dense_model = AutoModel.from_pretrained(dense_model_name).to(self.device)
@@ -105,10 +106,14 @@ class EmbedderServices:
         #BM25
         self.corpus_tokens = None
         self.bm25 = None
+        self.vocab= {}
 
     def fit_bm25(self,corpus):
         self.corpus_tokens = [doc.split(" ")  for doc in corpus]
         self.bm25 = BM25Okapi(self.corpus_tokens)
+        # Tạo vocab mapping
+        unique_tokens = sorted(set(token for doc in self.corpus_tokens for token in doc))
+        self.vocab = {token: idx for idx, token in enumerate(unique_tokens)}
 
     def encode_dense(self, texts):
         if isinstance(texts, str):
@@ -120,16 +125,46 @@ class EmbedderServices:
             outputs = self.dense_model(**inputs)
         return outputs.last_hidden_state.mean(dim=1).cpu().numpy().tolist()
     
-    def encode_sparse(self, query):
+    def encode_sparse(self, texts):
         if not self.bm25:
             raise ValueError("BM25 chưa được fit")
-        
-        tokenizer_query = query.split(" ")
-        scores = self.bm25.get_scores(tokenizer_query)
-        # vị trí từ trong vocab
-        indices = [i for i,s in enumerate(scores) if s>0]
-        #score tương ứng
-        values = [s for s in scores if s>0]
-        return {"indices":indices, "values":values}
+
+        if isinstance(texts, str):
+            texts = [texts]
+
+        results = []
+        for text in texts:
+            tokens = text.split(" ")
+            index_map = {}
+            for token in tokens:
+                if token in self.vocab:
+                    idx = self.vocab[token]
+                    val = self.bm25.idf.get(token, 0.0)
+                    if val > 0:
+                        index_map[idx] = index_map.get(idx, 0.0) + val
+            indices = sorted(list(index_map.keys()))
+            values = list(index_map.values())
+            results.append({"indices": indices, "values": values})
+        return results
+    
+    # def encode_sparse(self, text: str):
+    #     if not self.bm25:
+    #         raise ValueError("BM25 chưa được fit")
+
+    #     tokens = text.split(" ")
+    #     indices = []
+    #     values = []
+    #     for token in tokens:
+    #         if token in self.vocab:
+    #             idx = self.vocab[token]
+    #             val = self.bm25.idf.get(token, 0.0)
+    #             if val > 0:
+    #                 indices.append(idx)
+    #                 values.append(val)
+
+    #     return {"indices": indices, "values": values}
+
+
+
 
 embedder_services = EmbedderServices()

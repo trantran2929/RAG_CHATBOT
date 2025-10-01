@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 from langgraph.graph.message import add_messages
 import uuid, time
+import re
 
 
 @dataclass
@@ -72,6 +73,12 @@ class GlobalState:
     # Thông tin debug/tracking
     debug_info: Dict[str, Any] = field(default_factory=dict)
 
+    is_greeting: bool = False   # Chỉ chào hỏi
+    is_confirmation: bool = False  # Các câu "có", "ok", "yes"
+    is_smalltalk: bool = False  # Tán gẫu, không cần gọi LLM
+
+    # Tickers được trích xuất từ user_query
+    tickers: List[str] = field(default_factory=list)
     def add_debug(self, key: str, value: Any):
         """Thêm thông tin debug vào state."""
         self.debug_info[key] = value
@@ -79,3 +86,9 @@ class GlobalState:
     def add_message(self, role: str, content: str):
         """Thêm 1 message vào hội thoại hiện tại."""
         self.messages.append({"role": role, "content": content})
+
+    def extract_tickers(self):
+        """Trích xuất tickers"""
+        if self.user_query:
+            self.tickers = re.findall(r"\b[A-Z]{2,5}\b", self.user_query)
+        return self.tickers

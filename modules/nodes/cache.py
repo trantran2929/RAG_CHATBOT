@@ -36,9 +36,18 @@ def save_cache(state: GlobalState) -> GlobalState:
         return state
 
     cache_key = f"chat:{state.session_id}"
+
+    cleaned_history = []
+    for msg in state.conversation_history:
+        if not isinstance(msg, dict):
+            continue
+        role = msg.get("role", "").lower()
+        content = (msg.get("content") or msg.get("query") or msg.get("answer") or "").strip()
+        if role in ["user", "assistant"] and content:
+            cleaned_history.append({"role": role, "content": content})
     redis_services.client.setex(
         cache_key,
         CACHE_TTL,
-        json.dumps(state.conversation_history, ensure_ascii=False)
+        json.dumps(cleaned_history, ensure_ascii=False)
     )
     return state

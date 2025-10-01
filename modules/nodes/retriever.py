@@ -2,6 +2,10 @@ from modules.core.state import GlobalState
 from modules.utils.debug import add_debug_info
 from datetime import datetime, timedelta
 
+def debug_print(state: GlobalState, key: str, value):
+    add_debug_info(state, key, value)
+    print(f"DEBUG: {key} = {value}", flush=True) 
+
 def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int = 48) -> GlobalState:
     """
     Lấy documents (payload) từ Qdrant search_results
@@ -10,6 +14,7 @@ def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int
     if not state.search_results:
         state.retrieved_docs = []
         state.context = ""
+        print("No search results found.", flush=True)
         add_debug_info(state, "retriever", "Không có tài liệu nào được tìm thấy")
         return state
 
@@ -23,19 +28,27 @@ def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int
         payload = hit.get("payload", {}) or {}
         score = hit.get("score", 0.0)
 
-        content = (payload.get("content") or "").strip()
-        if not content or len(content) < 20:  
-            content = (payload.get("summary") or "").strip()
+        content = (payload.get("content") or payload.get("summary") or payload.get("text") or "").strip()
+        if not content or len(content) < 20:
+            print("Skipping document due to insufficient content length.")
+            continue
 
         title = payload.get("title", "")
-        url = payload.get("url", "")
+        url = payload.get("url", "") or payload.get("link", "") or ""
         time = payload.get("time", "")
-
-        try:
-            time_dt = datetime.strftimep(time, "%Y-%m-%d %H:%M:%S")
-        except Exception:
-            time_dt = None
-
+        time_dt = None
+        if time:
+            try:
+                time_dt = datetime.strptime(time, "%d-%m-%Y %H:%M:%S")
+            except Exception:
+                time_dt = None
+        debug_print(state, f"retriever_hit_{hit.get('id')}", {
+            "score": score,
+            "title": title,
+            "time": time,
+            "url": url,
+            "content_len": len(content)
+        })
         if content and (time_dt is None or time_dt >= time_limit):
             docs.append({
                 "id": hit.get("id"),
@@ -67,8 +80,23 @@ def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int
     state.retrieved_docs = docs
     state.context = context_text
 
-    add_debug_info(state, "retriever_docs", len(docs))
-    add_debug_info(state, "retriever_context_len", len(state.context))
-    add_debug_info(state, "retriever_titles", [d["title"] for d in docs])
+    print("=== RETRIEVED DOCS ===", flush=True)
+    for d in state.retrieved_docs:
+        print({
+            "id": d.get("id"),
+            "score": d.get("score"),
+            "title": d.get("title"),
+            "time": d.get("time"),
+            "url": d.get("url"),
+            "content_preview": d.get("content")[:200]  
+        }, flush=True)
+
+    print("=== FINAL CONTEXT PASSED TO PROMPT ===", flush=True)
+    print(state.context[:500], flush=True)  
+
+    debug_print(state, "retriever_docs", len(docs))
+    debug_print(state, "retriever_context_len", len(state.context))
+    debug_print(state, "retriever_titles", [d["title"] for d in docs])
+
 
     return state

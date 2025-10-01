@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
 
   qdrant:
-    image: qdrant/qdrant:v1.15.1
+    image: qdrant/qdrant:latest
     container_name: qdrant
     ports:
       - "6333:6333"
@@ -44,11 +44,30 @@ services:
       - QDRANT__SERVICE__HTTP_PORT=6333
       - QDRANT__SERVICE__GRPC_PORT=6334
       - QDRANT__WEB_UI__ENABLED=true
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:6333/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    # healthcheck:
+    #   test: ["CMD-SHELL", "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:6333/collections\").read()' || exit 1"]
+    #   interval: 20s
+    #   timeout: 5s
+    #   retries: 5
+    #   start_period: 40s
+    restart: unless-stopped
+
+  ingestion:
+    build:
+      context: .
+      dockerfile: modules/ingestion/Dockerfile
+    container_name: ingestion
+    depends_on:
+      - redis
+      - qdrant
+    networks:
+      - chatbot-net
+    environment:
+      - REDIS_HOSTS=redis
+      - REDIS_PORTS=6379
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - HF_TOKEN=${HF_TOKEN}
     restart: unless-stopped
 
 volumes:
