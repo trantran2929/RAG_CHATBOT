@@ -79,17 +79,15 @@ def build_prompt(state: GlobalState, max_context_chars: int = 1800) -> GlobalSta
     # Retrieved Context
     retrieved_docs = getattr(state, "retrieved_docs", []) or []
     if retrieved_docs:
-        def parse_time(doc):
-            t = doc.get("time")
-            try:
-                return datetime.strptime(t, "%d-%m-%Y %H:%M:%S")
-            except Exception:
-                return datetime.min
         sorted_docs = sorted(
             retrieved_docs,
-            key=lambda d: (parse_time(d), d.get("score", 0.0)),
+            key=lambda d: (
+                datetime.strptime(d.get("time", ""), "%d-%m-%Y %H:%M:%S")
+                if d.get("time") else datetime.min, 
+                d.get("score", 0.0)
+            ),
             reverse=True
-            )
+        )
         context_parts = []
         for doc in sorted_docs:
             text = (doc.get("content") or doc.get("summary") or "").strip()

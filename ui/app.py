@@ -23,11 +23,6 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
-# if "init_prompt_done" not in st.session_state:
-#     init_state = GlobalState(session_id=st.session_state.session_id)
-#     init_state = build_prompt(init_state)
-#     print(init_state.prompt)
-#     st.session_state.init_prompt_done = True
 # SIDEBAR 
 with st.sidebar:
     st.subheader("⚙️ Tùy chọn")
