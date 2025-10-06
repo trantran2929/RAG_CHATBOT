@@ -18,7 +18,7 @@ def run_scheduler(
             if not raw_articles:
                 print("[Ingestion] Không lấy được bài nào, bỏ qua batch.")
             else:
-                docs = preprocess_articles(raw_articles, max_words=200)
+                docs = preprocess_articles(raw_articles)
                 print(f"[Ingestion] Prepared {len(docs)} chunks")
 
                 if docs:

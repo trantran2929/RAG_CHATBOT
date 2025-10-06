@@ -20,4 +20,6 @@ timm
 rank_bm25
 unsloth
 langgraph
+underthesea
+vnstock3
 # pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128

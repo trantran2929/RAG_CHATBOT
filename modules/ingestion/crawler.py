@@ -9,20 +9,20 @@ TIMEZONE_OFFSET = 7 # UTC+7
 
 def normalize_time(time_tag) -> str:
     """Chuẩn hóa thời gian về format dd-mm-YYYY HH:MM:SS (UTC+7)."""
+    now = datetime.utcnow() - timedelta(hours=TIMEZONE_OFFSET)
     if not time_tag:
-        return ""
+        return now.strftime("%d/%m/%Y, %H:%M:%S")
 
-    # Nếu có attribute title sẵn ISO (ví dụ: 2025-09-25T08:27:00)
+    # Nếu có attribute title sẵn ISO (2025-09-25T08:27:00)
     if time_tag.has_attr("title"):
         try:
             dt = datetime.fromisoformat(time_tag["title"])
             return dt.strftime("%d-%m-%Y %H:%M:%S")
         except Exception:
-            return time_tag["title"]
+            pass
 
     # Nếu chỉ có text: "1 giờ trước", "5 phút trước", "2 ngày trước"
     text = time_tag.get_text(strip=True).lower()
-    now = datetime.utcnow() + timedelta(hours=TIMEZONE_OFFSET)
 
     num = int(re.search(r"\d+", text).group()) if re.search(r"\d+", text) else 0
 

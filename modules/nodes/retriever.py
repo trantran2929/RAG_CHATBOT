@@ -1,60 +1,58 @@
 from modules.core.state import GlobalState
 from modules.utils.debug import add_debug_info
 from datetime import datetime, timedelta
-
-def debug_print(state: GlobalState, key: str, value):
-    add_debug_info(state, key, value)
-    print(f"DEBUG: {key} = {value}", flush=True) 
+from modules.api.time_api import get_datetime_context
+import pytz
 
 def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int = 48) -> GlobalState:
     """
-    Lấy documents (payload) từ Qdrant search_results
-    và tổng hợp lại context cho LLM.
+    Lấy documents (payload) từ Qdrant search_results và tổng hợp lại context cho LLM.
+    - Nếu query là API (state.api_response != None) thì bỏ qua
+    - Nếu có yếu tố thời gian thì thêm ngữ cảnh thời gian vào đầu context
+    - Giới hạn context theo max_chars và max_hours.
     """
+
+    if getattr(state,"api_response",None):
+        state.retrieved_docs = []
+        state.context = ""
+        add_debug_info(state, "retriever", "Skipped")
+        return state
+    
     if not state.search_results:
         state.retrieved_docs = []
         state.context = ""
-        print("No search results found.", flush=True)
         add_debug_info(state, "retriever", "Không có tài liệu nào được tìm thấy")
         return state
 
     docs = []
     context_parts = []
-
-    now = datetime.utcnow()
-    time_limit = now - timedelta(hours=max_hours)
+    vn_tz = pytz.timezone("Asia/Ho_Chi_Minh")
+    now = datetime.now(vn_tz)
+    min_ts = int((now - timedelta(hours=max_hours)).timestamp())
 
     for hit in state.search_results:
         payload = hit.get("payload", {}) or {}
-        score = hit.get("score", 0.0)
+        score = float(hit.get("score", 0.0)) if hit.get("score") is not None else 0.0
 
         content = (payload.get("content") or payload.get("summary") or payload.get("text") or "").strip()
         if not content or len(content) < 20:
-            print("Skipping document due to insufficient content length.")
             continue
 
         title = payload.get("title", "")
         url = payload.get("url", "") or payload.get("link", "") or ""
         time = payload.get("time", "")
-        time_dt = None
-        if time:
-            try:
-                time_dt = datetime.strptime(time, "%d-%m-%Y %H:%M:%S")
-            except Exception:
-                time_dt = None
-        debug_print(state, f"retriever_hit_{hit.get('id')}", {
-            "score": score,
-            "title": title,
-            "time": time,
-            "url": url,
-            "content_len": len(content)
-        })
-        if content and (time_dt is None or time_dt >= time_limit):
+        time_ts = payload.get("time_ts",None)
+
+        if time_ts and isinstance(time_ts, (int, float)) and time_ts < min_ts:
+            continue
+
+        if content:
             docs.append({
                 "id": hit.get("id"),
                 "score": score,
                 "title": title,
                 "time": time,
+                "time_ts": time_ts,
                 "url": url,
                 "content": content
             })
@@ -62,10 +60,17 @@ def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int
                 f"[{title} | {time}]\n{content}\n(Source: {url})"
             )
 
-    # Ghép context
+        add_debug_info(state, f"retriever_hit_{hit.get('id')}", {
+            "score": round(score, 4),
+            "title": title,
+            "time": time,
+            "time_ts": time_ts,
+            "url": url,
+            "content_len": len(content)
+        })
+
     context_text = "\n\n".join(context_parts)
 
-    # Giới hạn độ dài nhưng ưu tiên không cắt giữa đoạn
     if len(context_text) > max_chars:
         truncated = []
         total = 0
@@ -76,27 +81,32 @@ def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int
             total += len(part)
         context_text = "\n\n".join(truncated) + "\n...\n[Context truncated]"
 
-    # cập nhật state
     state.retrieved_docs = docs
-    state.context = context_text
+    state.context = context_text.strip()
 
-    print("=== RETRIEVED DOCS ===", flush=True)
-    for d in state.retrieved_docs:
-        print({
-            "id": d.get("id"),
-            "score": d.get("score"),
-            "title": d.get("title"),
-            "time": d.get("time"),
-            "url": d.get("url"),
-            "content_preview": d.get("content")[:200]  
-        }, flush=True)
+    if getattr(state,"debug", False):
+        print("*** RETRIEVED DOCS ***", flush=True)
+        for d in state.retrieved_docs:
+            print({
+                "id": d.get("id"),
+                "score": d.get("score"),
+                "title": d.get("title"),
+                "time": d.get("time"),
+                "time_ts": d.get("time_ts"),
+                "url": d.get("url"),
+                "content_preview": d.get("content")[:200]  
+            }, flush=True)
 
-    print("=== FINAL CONTEXT PASSED TO PROMPT ===", flush=True)
-    print(state.context[:500], flush=True)  
+        print("*** FINAL CONTEXT PASSED TO PROMPT ***", flush=True)
+        print(state.context[:500], flush=True)  
 
-    debug_print(state, "retriever_docs", len(docs))
-    debug_print(state, "retriever_context_len", len(state.context))
-    debug_print(state, "retriever_titles", [d["title"] for d in docs])
+    add_debug_info(state, "retriever_docs", len(docs))
+    add_debug_info(state, "retriever_context_len", len(state.context))
+    add_debug_info(state, "retriever_titles", [d["title"] for d in docs])
 
+    if getattr(state, "debug", False):
+        print(f"[Retriever] Retrieved {len(docs)} docs", flush=True)
+        for d in docs:
+            print(f"  - {d['title']} | {d['time']} | score={d['score']:.3f}", flush=True)
 
     return state

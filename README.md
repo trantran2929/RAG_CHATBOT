@@ -11,6 +11,11 @@ rag_project/ <br>
 │   │   ├── graph.py <br>
 │   │   └── state.py     <br>
 │   │     <br>
+│   ├── api/ <br>
+│   │   ├── stock_api.py <br>
+│   │   ├── time_api.py <br>
+│   │   └── weather_api.py     <br>
+│   │     <br>
 │   ├── nodes/ <br>
 │   │   ├── cache.py          # Lưu lịch sử hội thoại  <br> 
 │   │   ├── processor.py      # Tiền xử lý <br>
@@ -36,84 +41,64 @@ rag_project/ <br>
 │         <br>
 └── data/      <br>
     └── documents.json   <br>
-       
-# WORKFLOW
-
-[User Input]
-     │
-     ▼
-[Processor] ──► Clean & Normalize ──► Detect Language
-     │
-     ▼
-
-     │                                                                   │
-     ▼                                                                   │
-     No                                                                  │
-     │                                                                   │
-[Embedder] ──► Convert query to vector                                   │
-     │                                                                   │
-     ▼                                                                   │
-[Vector DB: Qdrant Search]                                               │
-     │
-     ├─► Match found (cosine similarity > threshold)? ──► Yes ──► Use existing snippets ─┐
-     │                                                                                   │
-     ▼                                                                                   │
-     No                                                                                   │
-     │                                                                                   │
-[Retriever] ──► Select top-k relevant snippets                                         │
-     │                                                                                   │
-     ▼                                                                                   │
-[Prompt Builder] ──► Build final prompt including:                                      │
-     │                  - User query                                                   │
-     │                  - Retrieved snippets                                           │
-     │                  - Conversation context (Redis)                                 │
-     ▼                                                                                   │
-[Redis: Load Session History] ──► Merge with current context                            │
-     │                                                                                   │
-     ▼                                                                                   │
-[LLM Engine] ──► Generate natural language answer                                      │
-     │
-     ▼
-[Response] ──► Return to user & append to Redis conversation history
-     │
-     ▼
-[End]
 
 
-# Giải thích:
-1. Processor:
-- Làm sạch câu hỏi, chuẩn hóa chữ hoa/thường, loại bỏ ký tự thừa.
-- Detect ngôn ngữ để build prompt phù hợp.
-
-2. Check Short Greeting:
-- Các câu như "hi", "hello", "xin chào" được lọc ra, không lưu Qdrant, trả câu chào sẵn.
-
-3. Embedder:
-- Chuyển query thành vector embedding.
-- Chuẩn bị cho bước search Qdrant.
-
-4. Vector DB (Qdrant):
-- Tìm các câu hỏi tương tự.
-- Nếu trùng (cosine similarity cao) → sử dụng snippets cũ, không lưu lại.
-- Nếu chưa có → lưu vector + payload mới (có version, timestamp).
-
-5. Retriever:
-- Lấy top-k snippets liên quan để đưa vào prompt.
-
-6. Prompt Builder:
-- Tích hợp: user query + snippets + lịch sử hội thoại từ Redis.
-- Tạo prompt tối ưu cho LLM.
-7. Redis:
-- Lưu context hội thoại theo session, không lưu lâu dài.
-- Hỗ trợ ngữ cảnh hội thoại liên tục.
-
-8. LLM Engine:
-- Sinh câu trả lời tự nhiên dựa trên prompt cuối cùng.
-
-9. Response
-- Trả kết quả cho user.
-- Append conversation vào Redis để duy trì lịch sử.
-
-10. Vector DB (lưu mới):
-- Chỉ lưu câu hỏi mới, không trùng, không phải greeting.
-- Chuẩn hóa vector → list, gắn version, timestamp.
+rag_project/    <br>
+│── docker-compose.yml  <br>
+│── requirements.txt    <br>
+│   <br>
+├── ui/ <br>
+│   └── app.py                      # Streamlit/FastAPI UI hoặc REST interface  <br>
+│   <br>
+├── modules/    <br>
+│   ├── core/   <br>
+│   │   ├── graph.py                # LangGraph: định nghĩa các node và edges   <br>
+│   │   ├── state.py                # GlobalState + cấu trúc dữ liệu hội thoại  <br>
+│   │   └── router.py (optional)    # có thể để ở đây nếu router liên quan trực tiếp đến graph  <br>
+│   │   <br>
+│   ├── api/    <br>
+│   │   ├── stock_api.py            # REST + WebSocket chứng khoán (Vnstock + VNDirect) <br>
+│   │   ├── time_api.py             # API thời gian hiện tại (UTC+7)    <br>
+│   │   ├── weather_api.py          # API thời tiết (OpenWeather)   <br>
+│   │   └── news_api.py (optional)  # API tin tức nhanh (VD: RSS, Vietstock)    <br>
+│   │   <br>
+│   ├── nodes/  <br>
+│   │   ├── cache.py                # Redis cache (conversation, vector results)    <br>
+│   │   ├── processor.py            # Tiền xử lý câu hỏi người dùng (detect intent, clean)  <br>
+│   │   ├── router.py               # Phân luồng: gọi API hay RAG pipeline  <br>
+│   │   ├── embedder.py             # Sinh embedding từ text    <br>
+│   │   ├── vector_db.py            # CRUD Qdrant: upsert, search, filter   <br>
+│   │   ├── retriever.py            # Lấy top-k docs từ Qdrant  <br>
+│   │   ├── prompt_builder.py       # Xây prompt kết hợp Context + API data <br>
+│   │   ├── response_generator.py   # Gọi LLM (Gemma/Ollama/vLLM)   <br>
+│   │   ├── response.py             # Chuẩn hóa kết quả (format, append history)    <br>
+│   │   └── evaluator.py (optional) # Đánh giá chất lượng phản hồi (RAG, factuality)    <br>
+│   │   <br>
+│   ├── ingestion/  <br>
+│   │   ├── Dockerfile  <br>
+│   │   ├── crawler.py              # Crawl CafeF, Vietstock, ...   <br>
+│   │   ├── preprocess.py           # Làm sạch + tách đoạn text <br>
+│   │   ├── loader.py               # Tạo embedding, upsert vào Qdrant  <br>
+│   │   ├── scheduler.py            # Cron job tự crawl định kỳ <br>
+│   │   └── validator.py (optional) # Kiểm tra dữ liệu trước khi insert (duplicate, null)   <br>
+│   │   <br>
+│   ├── ml/ (mới thêm)              # phục vụ huấn luyện dự đoán / phân tích nâng cao    <br>
+│   │   ├── predictor.py            # Mô hình dự đoán thị trường (ARIMA, LSTM, Prophet) <br>
+│   │   ├── sentiment_model.py      # Mô hình phân tích cảm xúc bài báo <br>
+│   │   ├── train_utils.py          # Tiện ích huấn luyện, chia tập, scaler <br>
+│   │   └── model_store/            # Lưu checkpoint / model weights    <br>
+│   │   <br>
+│   └── utils/  <br>
+│       ├── debug.py                # Hàm log + thêm debug_info vào state   <br>
+│       ├── logger.py               # Logging thống nhất    <br>
+│       ├── qdrant_utils.py         # Đổi tên chuẩn (fix lỗi "qdrant_ultils")   <br>
+│       ├── redis_utils.py (optional) # Các hàm Redis helper    <br>
+│       ├── api_utils.py (optional) # Hàm chung cho gọi API (retry, timeout)    <br>
+│       └── services.py             # Qdrant, Redis, LLM, Embedding service wrapper <br>
+│   <br>
+└── data/   <br>
+    ├── documents.json              # Lưu tài liệu đã crawl <br>
+    ├── raw/                        # Dữ liệu gốc (HTML, JSON)  <br>
+    ├── processed/                  # Sau preprocess    <br>
+    ├── embeddings/                 # Cache embedding (nếu cần) <br>
+    └── models/                     # Model đã huấn luyện (ARIMA, Prophet, v.v.)    <br>

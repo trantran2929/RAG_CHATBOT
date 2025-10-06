@@ -1,6 +1,7 @@
 from modules.core.state import GlobalState
 from modules.utils.debug import add_debug_info
-from datetime import datetime
+from datetime import datetime, timedelta
+from modules.api.time_api import get_datetime_context
 
 SYSTEM_INSTRUCTION = """
 ***Bạn là trợ lý AI chuyên về tài chính. Hãy thực hiện các nhiệm vụ sau:***
@@ -19,12 +20,20 @@ CONSTRAINTS = """
 """
 
 def build_prompt(state: GlobalState, max_context_chars: int = 1800) -> GlobalState:
+
+    if getattr(state, "api_response", None):
+        add_debug_info(state, "prompt_builder", "Skipped")
+        state.prompt = ""
+        return state
+
     lang = state.lang or "vi"
     prompt_parts = []
 
     prompt_parts.append(f"## Instruction:\n {SYSTEM_INSTRUCTION.strip()}\n\n")
     
     prompt_parts.append(f"## Constraints:\n {CONSTRAINTS.strip()}\n\n")
+
+    prompt_parts.append("## Current Date/Time Context:\n" + get_datetime_context()+ "\n(Luôn sử dụng thông tin trên khi người dùng hỏi về ngày, giờ, hôm qua, mai, tuần trước/sau.)")
 
     examples = """
     ## Examples (chỉ minh họa định dạng hội thoại, KHÔNG lặp lại nội dung ví dụ, chỉ dùng để tham khảo cấu trúc):
@@ -37,59 +46,35 @@ def build_prompt(state: GlobalState, max_context_chars: int = 1800) -> GlobalSta
     **User:** Thị trường chứng khoán Việt Nam có xu hướng gì nổi bật?  
     **Assistant:** Phân tích xu hướng dựa trên tin tức và dữ liệu, ngắn gọn, súc tích.
     """
-    # examples_lines = []
-    # for idx, (input_text, output_text) in enumerate(examples, start=1):
-    #     examples_lines.append(
-    #     f"**Example {idx}:**\n"
-    #     f"- User: {input_text}\n"
-    #     f"- Assistant: {output_text}"
-    # )
-        
-    # user_input = (state.user_query or state.processed_query or "").strip()
-    # if user_input:
-    #     examples_lines.append(f"**User:** {user_input}\n**Assistant:**")
     prompt_parts.append(examples.strip())
 
     # Conversation History
-    history_msgs = state.conversation_history or []
-    history_lines = []
+    history_msgs = (state.conversation_history or [])[-5:]
     if history_msgs:
+        history_lines = []
         for msg in history_msgs:
-            if not isinstance(msg, dict):
-                continue
             role = msg.get("role", "").capitalize()
-            if role not in ["User", "Assistant"]:
-                continue
-            content = (
-                msg.get("content")
-                or msg.get("query")
-                or msg.get("answer")
-                or ""
-            ).strip()
-            if content:
-                if role == "User":
-                    history_lines.append(f"**User:** {content}")
-                elif role == "Assistant":
-                    history_lines.append(f"**Assistant:** {content}\n")
-    if history_lines:
-        prompt_parts.append("## Conversation History:\n" + "\n".join(history_lines))
-    # else:
-    #     prompt_parts.append("## Conversation History:\nKhông có lịch sử hội thoại.")
+            if role in ["User", "Assistant"]:
+                content = (
+                    msg.get("content")
+                    or msg.get("query")
+                    or msg.get("answer")
+                    or ""
+                ).strip()
+                if content:
+                    if role == "User":
+                        history_lines.append(f"**User:** {content}")
+                    elif role == "Assistant":
+                        history_lines.append(f"**Assistant:** {content}\n")
+        if history_lines:
+            prompt_parts.append("## Conversation History:\n" + "\n".join(history_lines))
+
             
     # Retrieved Context
     retrieved_docs = getattr(state, "retrieved_docs", []) or []
     if retrieved_docs:
-        sorted_docs = sorted(
-            retrieved_docs,
-            key=lambda d: (
-                datetime.strptime(d.get("time", ""), "%d-%m-%Y %H:%M:%S")
-                if d.get("time") else datetime.min, 
-                d.get("score", 0.0)
-            ),
-            reverse=True
-        )
         context_parts = []
-        for doc in sorted_docs:
+        for doc in sorted(retrieved_docs, key=lambda d: d.get("score", 0.0), reverse=True):
             text = (doc.get("content") or doc.get("summary") or "").strip()
             if text:
                 if len(text) > 500:
@@ -99,19 +84,22 @@ def build_prompt(state: GlobalState, max_context_chars: int = 1800) -> GlobalSta
                 time = doc.get("time", "")
                 score = doc.get("score", None)
 
-                meta = " | ".join(filter(None, [title, time,f"score={score:.3f}" if score is not None else None, f"Link: {url}" if url else None]))
+                meta = " | ".join(filter(None, [
+                    title, time,
+                    f"score={score:.3f}" if score is not None else None, 
+                    f"Link: {url}" if url else None
+                ]))
                 context_parts.append(f"[{meta}]\n{text}")
 
         context_text = "\n\n".join(context_parts)
-        # if len(context_text) > max_context_chars:
-        #     context_text = context_text[:max_context_chars] + "...\n[Context truncated]"
+    # if len(context_text) > max_context_chars:
+    #     context_text = context_text[:max_context_chars] + "...\n"
         prompt_parts.append("## Retrieved Context:\n" + context_text)
     else:
         prompt_parts.append("## Retrieved Context:\nKhông có tài liệu nào được lấy từ Qdrant (-> kiểm tra retriever).")
     # User query
     user_input = (state.user_query or state.processed_query or "").strip()
-    prompt_parts.append("\n## Task Input:")
-    prompt_parts.append(f"**User:** {user_input}")
+    prompt_parts.append(f"\n## Task Input:\n**User:** {user_input}")
 
     if lang == "vi":
         lang_instruction = "Không được sử dụng ngôn ngữ khác ngoài tiếng Việt."
@@ -121,12 +109,18 @@ def build_prompt(state: GlobalState, max_context_chars: int = 1800) -> GlobalSta
     joined_parts = "\n\n".join(prompt_parts)
 
     state.prompt = "\n\n".join([lang_instruction, joined_parts,"## Task Output:","**Assistant:**\n"]).strip()
+
     print(state.prompt)
+
+    if getattr(state,"debug", False):
+        print("*** FINAL PROMPT SAMPLE ***")
+        print(state.prompt[:600], flush=True)
 
     # Debug
     add_debug_info(state, "prompt_length", len(state.prompt))
     add_debug_info(state, "prompt_preview", state.prompt[:400])
     add_debug_info(state, "history_count", len(history_msgs))
     add_debug_info(state, "context_docs_count", len(retrieved_docs))
+    add_debug_info(state, "prompt_bulder_status", "RAG prompt built")
 
     return state

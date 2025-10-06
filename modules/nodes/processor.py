@@ -2,43 +2,27 @@ import re
 import unicodedata
 from langdetect import detect, DetectorFactory
 from difflib import get_close_matches
-
+from modules.api.weather_api import get_weather,normalize_city_name
+from modules.api.stock_api import get_stock_price
+from modules.api.time_api import format_full, get_now
+import pytz
+from datetime import timedelta, datetime
 DetectorFactory.seed = 0  # langdetect ổn định kết quả
 
 class Processor:
     def __init__(self, target_lang="vi", synonyms=None, stopwords=None, greetings=None):
-        """
-        target_lang: ngôn ngữ chính của dữ liệu (vd: 'vi' cho tiếng Việt)
-        synonyms: dict ánh xạ từ đồng nghĩa/alias
-        stopwords: list stopwords cần loại bỏ
-        """
+
         self.target_lang = target_lang
         self.synonyms = {k.lower(): v.lower() for k, v in (synonyms or {}).items()}
         self.stopwords = [w.lower() for w in (stopwords or [])]
         self.greetings = [g.lower() for g in (greetings or ["hi", "hello", "chào", "chao", "chào bạn", "xin chào"])]
         self.finance_keywords = [
-            "cổ phiếu", "chứng khoán", "thị trường", "vốn hóa", "lợi nhuận", "doanh thu",
-            "tăng trưởng", "đầu tư", "quỹ", "trái phiếu", "lãi suất", "ngân hàng",
-            "tài chính", "báo cáo tài chính", "cổ tức", "thị trường chứng khoán",
-            "chỉ số", "vĩ mô", "phân tích kỹ thuật",
-            "phân tích cơ bản", "bảng cân đối kế toán", "dòng tiền", "báo cáo thu nhập",
-            "thị trường tiền tệ", "thị trường vốn", "chính sách tiền tệ",
-            "rủi ro", "lợi nhuận ròng", "tỷ suất sinh lời", "đầu cơ", "bong bóng",
-            "thị trường phái sinh", "hợp đồng tương lai", "quyền chọn",
-            "ngoại hối", "tiền tệ", "vàng", "bạc", "hàng hóa",
-            "chính sách tài khóa", "lạm phát", "thất nghiệp", "GDP",
-            "ngân hàng trung ương", "FED", "ECB", "NHTW", "thị trường bất động sản",
-            "bất động sản", "cung tiền", "cầu tiền", "thị trường lao động",
-            "tỷ giá", "tỷ giá hối đoái", "thị trường trái phiếu", "chứng chỉ quỹ",
-            "phân tích định lượng", "phân tích định tính", "chiến lược đầu tư",
-            "quản lý rủi ro", "đòn bẩy tài chính", "thị trường sơ cấp",
-            "thị trường thứ cấp", "mua bán cổ phiếu", "sở giao dịch",
-            "công ty chứng khoán", "tư vấn đầu tư", "phân tích thị trường",
-            "báo cáo phân tích", "tín dụng", "nợ xấu", "tài sản",
-            "danh mục đầu tư", "quản lý quỹ", "tài chính cá nhân",
-            "ngân hàng số", "fintech", "blockchain", "tiền điện tử",
-            "bitcoin", "ethereum", "altcoin", "ICO", "DeFi"
+            "cổ phiếu", "chứng khoán", "thị trường", "vốn hóa", "lợi nhuận",
+            "doanh thu", "tăng trưởng", "đầu tư", "trái phiếu", "lãi suất",
+            "ngân hàng", "cổ tức", "GDP", "bitcoin", "ethereum", "DeFi"
         ]
+        self.weather_keywords = ["thời tiết", "nhiệt độ", "mưa", "nắng"]
+        self.time_keywords = ["mấy giờ", "bây giờ", "hôm nay", "ngày mấy", "thứ mấy"]
 
     def normalize(self, text: str) -> str:
         text = unicodedata.normalize("NFC", text)
@@ -94,6 +78,52 @@ class Processor:
             match = get_close_matches(norm_text, self.greetings, n=1, cutoff=0.8)
             return bool(match)
         return False
+    def detect_intent(self, query: str) -> str:
+        q = query.lower()
+        if any(k in q for k in ["tin", "tin tức", "cập nhập", "thị trường"]):
+            return "news"
+        if any(k in q for k in self.finance_keywords):
+            return "stock"
+        if any(k in q for k in self.weather_keywords):
+            return "weather"
+        if any(k in q for k in self.time_keywords):
+            return "time"
+        return "rag"
+    def detect_time_filter(self,query: str):
+        """
+        Trả về tuple (start_ts, end_ts) dạng epoch timestamp nếu query có từ khóa thời gian.
+        Nếu không match thì trả về None.
+        """
+        vn_tz = pytz.timezone("Asia/Ho_Chi_Minh")
+        now = datetime.now(vn_tz)
+
+        today_start = vn_tz.localize(datetime(now.year, now.month, now.day, 0, 0, 0))
+        today_end   = vn_tz.localize(datetime(now.year, now.month, now.day, 23, 59, 59))
+
+        yesterday_start = today_start - timedelta(days=1)
+        yesterday_end   = today_end - timedelta(days=1)
+
+        tomorrow_start = today_start + timedelta(days=1)
+        tomorrow_end   = today_end + timedelta(days=1)
+
+        last_week_start = today_start - timedelta(days=7)
+        next_week_end   = today_end + timedelta(days=7)
+
+        q = query.lower()
+
+        if "hôm nay" in q:
+            return (int(today_start.timestamp()), int(today_end.timestamp()))
+        elif "hôm qua" in q:
+            return (int(yesterday_start.timestamp()), int(yesterday_end.timestamp()))
+        elif "ngày mai" in q or q.startswith("mai "):
+            return (int(tomorrow_start.timestamp()), int(tomorrow_end.timestamp()))
+        elif "tuần trước" in q:
+            return (int(last_week_start.timestamp()), int(today_end.timestamp()))
+        elif "tuần sau" in q:
+            return (int(today_start.timestamp()), int(next_week_end.timestamp()))
+        
+        return None
+
     # Chuẩn hóa query tổng hợp
     def process_query(self, state, vocab: list = None):
         """
@@ -117,7 +147,8 @@ class Processor:
         state.processed_query = processed_query
         state.lang = lang
         state.is_greeting = is_greeting
-        state.extract_tickers()
+        state.intent = self.detect_intent
+        state.time_filter = self.detect_time_filter(user_query)
 
         return state
     
