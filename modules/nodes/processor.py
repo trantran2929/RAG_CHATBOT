@@ -2,11 +2,9 @@ import re
 import unicodedata
 from langdetect import detect, DetectorFactory
 from difflib import get_close_matches
-from modules.api.weather_api import get_weather,normalize_city_name
-from modules.api.stock_api import get_stock_price
-from modules.api.time_api import format_full, get_now
 import pytz
 from datetime import timedelta, datetime
+from vnstock import Listing
 DetectorFactory.seed = 0  # langdetect ổn định kết quả
 
 class Processor:
@@ -17,12 +15,21 @@ class Processor:
         self.stopwords = [w.lower() for w in (stopwords or [])]
         self.greetings = [g.lower() for g in (greetings or ["hi", "hello", "chào", "chao", "chào bạn", "xin chào"])]
         self.finance_keywords = [
-            "cổ phiếu", "chứng khoán", "thị trường", "vốn hóa", "lợi nhuận",
-            "doanh thu", "tăng trưởng", "đầu tư", "trái phiếu", "lãi suất",
-            "ngân hàng", "cổ tức", "GDP", "bitcoin", "ethereum", "DeFi"
+            "cổ phiếu", "chứng khoán", "thị trường", "vnindex", "vn-index",
+            "vni", "vn30", "hnx", "upcom", "vốn hóa", "doanh thu", "tăng trưởng",
+            "đầu tư", "trái phiếu", "lãi suất", "cổ tức", "bitcoin", "crypto"
         ]
         self.weather_keywords = ["thời tiết", "nhiệt độ", "mưa", "nắng"]
         self.time_keywords = ["mấy giờ", "bây giờ", "hôm nay", "ngày mấy", "thứ mấy"]
+        self.market_indices = {"VNINDEX", "VN-INDEX", "VNI", "VN30", "HNX", "UPCOM"}
+
+        try:
+            listing = Listing(source="VCI")
+            df = listing.all_symbols()
+            self.valid_tickers = set(df["symbol"].dropna().str.upper().tolist())
+        except Exception as e:
+            print(f"[Processor] ⚠️ Không thể tải danh sách mã chứng khoán ({e})")
+            self.valid_tickers = set()
 
     def normalize(self, text: str) -> str:
         text = unicodedata.normalize("NFC", text)
@@ -32,8 +39,9 @@ class Processor:
 
     def detect_language(self, text: str) -> str:
         try:
-            lang = detect(text)
-            return lang
+            if len(text.split()) < 3:
+                return self.target_lang
+            return detect(text)
         except:
             return self.target_lang
 
@@ -81,7 +89,7 @@ class Processor:
     def detect_intent(self, query: str) -> str:
         q = query.lower()
         if any(k in q for k in ["tin", "tin tức", "cập nhập", "thị trường"]):
-            return "news"
+            return "rag"
         if any(k in q for k in self.finance_keywords):
             return "stock"
         if any(k in q for k in self.weather_keywords):
@@ -123,6 +131,31 @@ class Processor:
             return (int(today_start.timestamp()), int(next_week_end.timestamp()))
         
         return None
+    
+    def detect_tickers(self, text: str) -> str:
+        """
+        Tìm mã chứng khoán hoặc chỉ số thị trường trong câu hỏi
+        Luôn lọc ticker rỗng và chỉ giữ lại mã hợp lệ
+        """
+        text_upper = text.upper()
+
+        # Tìm chuỗi viết hoa từ 2-6 kí tự
+        potential = re.findall(r"\b[A-Z]{2,6}\b", text_upper)
+        # Xử lý alias
+        aliases = {"VNI": "VNINDEX", "VN-INDEX": "VNINDEX"}
+        clean_list = []
+        for t in potential:
+            t = aliases.get(t,t.strip().upper())
+            if 3<=len(t)<=10 and (t in self.valid_tickers or t in self.market_indices) and t.isalpha():
+                clean_list.append(t)
+
+        if not clean_list:
+            match = re.findall(r"(?:cổ phiếu|mã)\s+([A-Z]{2,6})", text_upper)
+            for t in match:
+                if t in self.valid_tickers or t in self.market_indices:
+                    clean_list.append(t)
+
+        return sorted(set(clean_list))
 
     # Chuẩn hóa query tổng hợp
     def process_query(self, state, vocab: list = None):
@@ -147,8 +180,9 @@ class Processor:
         state.processed_query = processed_query
         state.lang = lang
         state.is_greeting = is_greeting
-        state.intent = self.detect_intent
+        state.intent = self.detect_intent(user_query)
         state.time_filter = self.detect_time_filter(user_query)
+        state.tickers = self.detect_tickers(user_query)
 
         return state
     

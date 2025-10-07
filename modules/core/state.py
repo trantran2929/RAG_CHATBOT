@@ -23,6 +23,8 @@ class GlobalState:
     role: str = ""
     intent: str = "rag"     # “time”, “weather”, “stock”, “news”, “rag”, …
     route_to: Optional[str] = None  # “api”, “rag”, “multi_agent”...
+    route_hint: Optional[str] = None     #gợi ý route do Processor phát hiện
+    route: str = "rag"                     # “RAG”, “API”, hoặc “Greeting”
 
     # khóa để check Redis cache
     cache_key: str = ""
@@ -55,10 +57,10 @@ class GlobalState:
 
     # Resonse cuối cùng trước khi thêm vào cached
     api_type: Optional[str] = None
+    api_result: Optional[Any] = None
     api_response: Optional[str] = None
 
     # Thông tin debug/tracking
-    route: str = "RAG"                     # “RAG”, “API”, hoặc “Greeting”
     debug: bool = False                    # in log nếu True
     debug_info: Dict[str, Any] = field(default_factory=dict)
 

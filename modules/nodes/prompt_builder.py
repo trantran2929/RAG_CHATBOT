@@ -1,6 +1,4 @@
 from modules.core.state import GlobalState
-from modules.utils.debug import add_debug_info
-from datetime import datetime, timedelta
 from modules.api.time_api import get_datetime_context
 
 SYSTEM_INSTRUCTION = """
@@ -22,7 +20,7 @@ CONSTRAINTS = """
 def build_prompt(state: GlobalState, max_context_chars: int = 1800) -> GlobalState:
 
     if getattr(state, "api_response", None):
-        add_debug_info(state, "prompt_builder", "Skipped")
+        state.add_debug("prompt_builder", "Skipped")
         state.prompt = ""
         return state
 
@@ -97,6 +95,17 @@ def build_prompt(state: GlobalState, max_context_chars: int = 1800) -> GlobalSta
         prompt_parts.append("## Retrieved Context:\n" + context_text)
     else:
         prompt_parts.append("## Retrieved Context:\nKhông có tài liệu nào được lấy từ Qdrant (-> kiểm tra retriever).")
+    
+    intent_instructions = {
+        "stock": "Phân tích hoặc tóm tắt dữ liệu cổ phiếu, chỉ số hoặc biến động thị trường Việt Nam.",
+        "news": "Tóm tắt nhanh tin tức tài chính/chứng khoán Việt Nam gần đây.",
+        "weather": "Trả lời thông tin thời tiết Việt Nam.",
+        "time": "Trả lời về ngày giờ, thời gian hoặc lịch hiện tại.",
+        "rag": "Phân tích câu hỏi tổng quát bằng cách dùng Context."
+    }
+    intent_task = intent_instructions.get(state.intent or "rag", "Trả lời câu hỏi tài chính tổng quát.")
+    prompt_parts.append(f"### Task Type:\nIntent: {state.intent}\nMô tả: {intent_task}")
+
     # User query
     user_input = (state.user_query or state.processed_query or "").strip()
     prompt_parts.append(f"\n## Task Input:\n**User:** {user_input}")
@@ -117,10 +126,10 @@ def build_prompt(state: GlobalState, max_context_chars: int = 1800) -> GlobalSta
         print(state.prompt[:600], flush=True)
 
     # Debug
-    add_debug_info(state, "prompt_length", len(state.prompt))
-    add_debug_info(state, "prompt_preview", state.prompt[:400])
-    add_debug_info(state, "history_count", len(history_msgs))
-    add_debug_info(state, "context_docs_count", len(retrieved_docs))
-    add_debug_info(state, "prompt_bulder_status", "RAG prompt built")
+    state.add_debug("prompt_length", len(state.prompt))
+    state.add_debug("prompt_preview", state.prompt[:400])
+    state.add_debug("history_count", len(history_msgs))
+    state.add_debug("context_docs_count", len(retrieved_docs))
+    state.add_debug("prompt_bulder_status", "RAG prompt built")
 
     return state

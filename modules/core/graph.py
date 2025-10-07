@@ -8,12 +8,14 @@ from modules.nodes.retriever import retrieve_documents
 from modules.nodes.prompt_builder import build_prompt
 from modules.nodes.response_generator import response_node
 from modules.utils.debug import debug_summary_node
+from modules.nodes.router import route_intent
 
 def build_graph():
     workflow = StateGraph(GlobalState)
 
     workflow.add_node("load_cache", load_cache)
     workflow.add_node("processor", processor_query)
+    workflow.add_node("router", route_intent)
     workflow.add_node("embedder", embed_query)
     workflow.add_node("vector_db", search_vector_db)
     workflow.add_node("retriever", retrieve_documents)
@@ -24,9 +26,10 @@ def build_graph():
 
     workflow.add_edge(START, "load_cache")
     workflow.add_edge("load_cache", "processor")
+    workflow.add_edge("processor", "router")
     workflow.add_conditional_edges(
-        "processor", 
-        lambda state: "api" if getattr(state, "api_response", None) else "rag",
+        "router", 
+        lambda state: getattr(state, "route_to", "rag"),
         {
             "api":"response_node",
             "rag": "embedder"

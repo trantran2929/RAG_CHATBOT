@@ -1,6 +1,5 @@
 from modules.core.state import GlobalState
 from modules.utils.services import qdrant_services
-from modules.utils.debug import add_debug_info
 import pytz
 from datetime import datetime, timedelta
 from qdrant_client import models
@@ -19,12 +18,12 @@ def search_vector_db(state: GlobalState, top_k: int = 5, alpha: float = 0.7) -> 
     - Nếu query đã được api xử lý (state.api_response): bỏ qua vector search
     """
     if getattr(state,"api_response",None):
-        add_debug_info(state, "vector_db", "Skipped")
+        state.add_debug("vector_db", "Skipped")
         state.search_results = []
         return state
     
     if not state.query_embedding:
-        add_debug_info(state, "vector_db", "No embedding")
+        state.add_debug("vector_db", "No embedding")
         state.search_results = []
         print(f"No embedding for query: {state.user_query}", flush=True)
         return state
@@ -101,7 +100,7 @@ def search_vector_db(state: GlobalState, top_k: int = 5, alpha: float = 0.7) -> 
                 } for r in base_results
             ]
 
-        add_debug_info(state, "vector_db_results", f"Found {len(state.search_results)} results")
+        state.add_debug("vector_db_results", f"Found {len(state.search_results)} results")
         if getattr(state,"debug",False):
             print(f"[VectorDB] Found {len(state.search_results)} results", flush=True)
             for r in state.search_results[:3]:
@@ -116,6 +115,6 @@ def search_vector_db(state: GlobalState, top_k: int = 5, alpha: float = 0.7) -> 
     except Exception as e:
         state.search_results = []
         print("Error during vector DB search:", str(e), flush=True)
-        add_debug_info(state, "vector_db_error", str(e))
+        state.add_debug("vector_db_error", str(e))
 
     return state

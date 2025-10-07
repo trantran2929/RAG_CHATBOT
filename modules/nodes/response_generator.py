@@ -12,37 +12,42 @@ def response_node(state: GlobalState, max_history: int = 50) -> GlobalState:
     - Chuẩn hóa output, lưu vào conversation_history
     """
     if getattr(state, "api_response", None):
-        assistant_msg = state.api_response
-        state.response = state.final_answer = assistant_msg
+        state.mark_api_response(
+            api_type=state.api_type or "generic_api",
+            result=state.api_response,
+            text=state.api_response
+        )
 
         if state.user_query:
             state.conversation_history.append({"role": "user", "content": state.user_query})
-        state.conversation_history.append({"role": "assistant", "content": assistant_msg})
+        state.conversation_history.append({"role": "assistant", "content": state.api_response})
 
-        add_debug_info(state, "llm_status", "api_response")
         add_debug_info(state, "router", "API")
+        add_debug_info(state, "intent", state.intent)
         return state
 
     if getattr(state, "is_greeting", False):
         assistant_msg = "Chào bạn! Tôi có thể giúp gì cho bạn?"
-        state.response = state.raw_response = state.final_answer = assistant_msg
+        state.set_final_answer(assistant_msg, route="Greeting")
 
         if state.user_query:
             state.conversation_history.append({"role": "user", "content": state.user_query})
         state.conversation_history.append({"role": "assistant", "content": assistant_msg})
         add_debug_info(state, "llm_status", "greeting")
-        add_debug_info(state, "router", "API")
+        add_debug_info(state, "router", "Greeting")
         return state
     
     if not state.prompt:
+        msg = "Prompt trống, không thể sinh câu trả lời."
+        state.set_final_answer(msg, route="RAG")
         add_debug_info(state, "llm_status", "empty_prompt")
-        state.response = state.final_answer = "Prompt trống, không thể sinh câu trả lời."
         return state
 
     try:
         if not getattr(llm_services, "generator", None):
+            msg = "LLM chưa được khởi tạo."
+            state.set_final_answer(msg, route="RAG")
             add_debug_info(state, "llm_status", "generator_not_initialized")
-            state.final_answer = "LLM chưa được khởi tạo."
             return state
 
         outputs = llm_services.generator(
@@ -66,6 +71,7 @@ def response_node(state: GlobalState, max_history: int = 50) -> GlobalState:
         else:
             text = ""
 
+        assistant_msg = re.sub(r"```[\s\S]*?```", "", text).strip()
         assistant_msg = re.sub(r"^(```+|---+)", "", text).strip()
         assistant_msg = re.sub(r"http\S+", "(link)", assistant_msg)
 
@@ -83,7 +89,7 @@ def response_node(state: GlobalState, max_history: int = 50) -> GlobalState:
     except Exception as e:
         add_debug_info(state, "llm_status", "error")
         add_debug_info(state, "llm_error", str(e))
-        state.final_answer = "Đã xảy ra lỗi khi gọi LLM."
+        state.set_final_answer("Đã xảy ra lỗi khi gọi LLM.", route="RAG")
         state.response = ""
         return state
 
@@ -108,5 +114,7 @@ def response_node(state: GlobalState, max_history: int = 50) -> GlobalState:
     add_debug_info(state, "llm_status", "success")
     add_debug_info(state, "route", "RAG")
     add_debug_info(state, "llm_response_len", len(assistant_msg))
+    add_debug_info(state, "intent", state.intent)
+    add_debug_info(state, "timestamp", datetime.now().isoformat())
 
     return state

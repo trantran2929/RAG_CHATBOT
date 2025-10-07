@@ -1,7 +1,5 @@
 from modules.core.state import GlobalState
-from modules.utils.debug import add_debug_info
 from datetime import datetime, timedelta
-from modules.api.time_api import get_datetime_context
 import pytz
 
 def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int = 48) -> GlobalState:
@@ -15,13 +13,15 @@ def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int
     if getattr(state,"api_response",None):
         state.retrieved_docs = []
         state.context = ""
-        add_debug_info(state, "retriever", "Skipped")
+        state.add_debug("retriever", "Skipped")
+        state.llm_status = "retriever_skipped"
         return state
     
     if not state.search_results:
         state.retrieved_docs = []
         state.context = ""
-        add_debug_info(state, "retriever", "Không có tài liệu nào được tìm thấy")
+        state.add_debug("retriever", "Không có tài liệu nào được tìm thấy")
+        state.llm_status = "retriever_no_docs"
         return state
 
     docs = []
@@ -60,7 +60,7 @@ def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int
                 f"[{title} | {time}]\n{content}\n(Source: {url})"
             )
 
-        add_debug_info(state, f"retriever_hit_{hit.get('id')}", {
+        state.add_debug(f"retriever_hit_{hit.get('id')}", {
             "score": round(score, 4),
             "title": title,
             "time": time,
@@ -100,9 +100,9 @@ def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int
         print("*** FINAL CONTEXT PASSED TO PROMPT ***", flush=True)
         print(state.context[:500], flush=True)  
 
-    add_debug_info(state, "retriever_docs", len(docs))
-    add_debug_info(state, "retriever_context_len", len(state.context))
-    add_debug_info(state, "retriever_titles", [d["title"] for d in docs])
+    state.add_debug("retriever_docs", len(docs))
+    state.add_debug("retriever_context_len", len(state.context))
+    state.add_debug("retriever_titles", [d["title"] for d in docs])
 
     if getattr(state, "debug", False):
         print(f"[Retriever] Retrieved {len(docs)} docs", flush=True)
