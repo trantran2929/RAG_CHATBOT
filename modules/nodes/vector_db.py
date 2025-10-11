@@ -1,5 +1,6 @@
 from modules.core.state import GlobalState
 from modules.utils.services import qdrant_services
+from qdrant_client.models import FusionQuery
 import pytz
 from datetime import datetime, timedelta
 from qdrant_client import models
@@ -13,23 +14,32 @@ def normalize_score(score: float) -> float:
 def search_vector_db(state: GlobalState, top_k: int = 5, alpha: float = 0.7) -> GlobalState:
     """
     Hybrid search (dense + sparse) trong Qdrant.
-    - Nếu có time_filter: lọc theo thời gian cụ thể (hôm qua, hôm nay, tuần trước,...)
-    - Nếu không có mặc định lấy dữ liệu trong 3 ngày gần nhất
-    - Nếu query đã được api xử lý (state.api_response): bỏ qua vector search
+    - Chỉ chạy khi route_to = {"rag", "hybrid"}
+    - Nếu có api_response hoặc không có embedding thì bỏ qua
+    - Có time_filter thì lọc theo mốc thời gian
+    - Kết hợp dense + sparse theo trong số alpha
     """
-    if getattr(state,"api_response",None):
-        state.add_debug("vector_db", "Skipped")
+    if getattr(state, "route_to", "") not in ["rag", "hybrid"]:
         state.search_results = []
+        state.add_debug("vector_db", "Skipped")
+        state.llm_status = "vector_db_skipped"
         return state
     
+    
     if not state.query_embedding:
-        state.add_debug("vector_db", "No embedding")
+        state.add_debug("vector_db", "Skipped")
         state.search_results = []
-        print(f"No embedding for query: {state.user_query}", flush=True)
+        state.llm_status = "vector_db_no_embedding"
         return state
 
     dense_vec = state.query_embedding.get("dense_vector")
     sparse_vec = state.query_embedding.get("sparse_vector")
+
+    if dense_vec is None and sparse_vec is None:
+        state.add_debug("vector_db", "No valid vectors found")
+        state.search_results = []
+        state.llm_status = "vector_db_empty_vectors"
+        return state
 
     vn_tz = pytz.timezone("Asia/Ho_Chi_Minh")
     now_vn = datetime.now(vn_tz)
@@ -50,71 +60,75 @@ def search_vector_db(state: GlobalState, top_k: int = 5, alpha: float = 0.7) -> 
         ]
     )
 
-    dense_results, sparse_results = [], []
-
     try:
+        prefetches = []
+
         if dense_vec is not None:
-            dense_results = qdrant_services.client.search(
-                collection_name=qdrant_services.collection_name,
-                query_vector=("dense_vector", dense_vec),
-                limit=top_k,
-                with_payload=True,
-                query_filter=search_filter
+            prefetches.append(
+                models.Prefetch(
+                    query=dense_vec,
+                    using="dense_vector",
+                    limit=top_k
+                )
             )
 
-        if sparse_vec is not None:
-            sparse_results = qdrant_services.client.search(
-                collection_name=qdrant_services.collection_name,
-                query_vector=("sparse_vector", sparse_vec),
-                limit=top_k,
-                with_payload=True,
-                query_filter=search_filter
+        if sparse_vec and isinstance(sparse_vec, list) and len(sparse_vec) > 0:
+            sv = sparse_vec[0]
+            prefetches.append(
+                models.Prefetch(
+                    query=models.SparseVector(
+                        indices=sv["indices"], values=sv["values"]
+                    ),
+                    using="sparse_vector",
+                    limit=top_k,
+                )
             )
-            
-        if dense_results and sparse_results:
-            combined = {}
-            for r in dense_results:
-                combined[r.id] = {
-                    "id": r.id,
-                    "score": normalize_score(r.score)* alpha,
-                    "payload": r.payload or {}
-                }
-            for r in sparse_results:
-                if r.id in combined:
-                    combined[r.id]["score"] += r.score * (1 - alpha)
-                else:
-                    combined[r.id] = {
-                        "id": r.id,
-                        "score": normalize_score(r.score) * (1 - alpha),
-                        "payload": r.payload or {}
-                    }
-            state.search_results = sorted(combined.values(), key=lambda x: x["score"], reverse=True)[:top_k]
+        
+        if not prefetches:
+            state.add_debug("vector_db", "No valid prefetch queries")
+            state.search_results = []
+            state.llm_status = "vector_db_no_query"
+            return state
+        
+        result = qdrant_services.client.query_points(
+            collection_name=qdrant_services.collection_name,
+            prefetch=prefetches,
+            query=models.FusionQuery(fusion=models.Fusion.RRF),
+            query_filter=search_filter,
+            with_payload=True
+        )
 
-        else:
-            base_results = dense_results if dense_results else sparse_results
-            state.search_results = [
-                {
-                    "id": r.id,
-                    "score": normalize_score(r.score),
-                    "payload": r.payload or {}
-                } for r in base_results
-            ]
+        hits = []
+        for p in result.points:
+            score = normalize_score(p.score)
+            payload = p.payload or {}
+            hits.append({
+                "id": p.id,
+                "score": round(score, 4),
+                "title": payload.get("title",""),
+                "time": payload.get("time",""),
+                "time_ts": payload.get("time_ts", ""),
+                "content": (payload.get("content") or "")[:300]
+            })
+        
+        state.search_results = hits
+        state.llm_status = "vector_db_success"
+        state.add_debug("vector_db_status", "success")
+        state.add_debug("vector_db_results", len(hits))
+        state.add_debug("vector_db_alpha", alpha)
+        state.add_debug("vector_db_time_range", (start_ts, end_ts))
+        state.add_debug("vector_db_query_type", getattr(state, "route_to", "unknown"))
 
-        state.add_debug("vector_db_results", f"Found {len(state.search_results)} results")
-        if getattr(state,"debug",False):
-            print(f"[VectorDB] Found {len(state.search_results)} results", flush=True)
-            for r in state.search_results[:3]:
-                print({
-                    "id": r["id"],
-                    "score": round(r["score"],4),
-                    "title": (r["payload"] or {}).get("title",""),
-                    "time": (r["payload"] or {}).get("time",""),
-                    "time_ts": (r["payload"] or {}).get("time_ts", "")
-                }, flush=True)
+        if getattr(state, "debug", False):
+            print(f"[FusionSearch] Found {len(hits)} results")
+            for r in hits[:3]:
+                print(f"{r['title']} | score={r['score']} | time_ts={r['time_ts']}")
 
     except Exception as e:
         state.search_results = []
-        print("Error during vector DB search:", str(e), flush=True)
+        state.llm_status = "vector_db_error"
+        state.add_debug("vector_db_status", "failed")
         state.add_debug("vector_db_error", str(e))
+        print("[FusionSearch] Lỗi:", e)
 
     return state

@@ -32,7 +32,8 @@ def build_graph():
         lambda state: getattr(state, "route_to", "rag"),
         {
             "api":"response_node",
-            "rag": "embedder"
+            "rag": "embedder",
+            "hybrid": "embedder"
         }
     )
     workflow.add_edge("embedder", "vector_db")

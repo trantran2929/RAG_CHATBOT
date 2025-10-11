@@ -1,40 +1,726 @@
-2025-10-07 08:33:23,609 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
-2025-10-07 08:33:23,956 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
-2025-10-07 08:33:23,961 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
-2025-10-07 08:33:24,296 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
-2025-10-07 08:33:24,331 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
-2025-10-07 08:33:24,782 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnstock/json HTTP/1.1" 200 28728
-2025-10-07 08:33:24,856 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
-2025-10-07 08:33:25,290 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnai/json HTTP/1.1" 200 2087
-2025-10-07 08:33:25,416 [DEBUG] matplotlib: matplotlib data path: C:\Users\admin\Desktop\TT\rag_note\venv\Lib\site-packages\matplotlib\mpl-data
-2025-10-07 08:33:25,416 [DEBUG] matplotlib: CONFIGDIR=C:\Users\admin\.matplotlib
-2025-10-07 08:33:25,425 [DEBUG] matplotlib: interactive is False
-2025-10-07 08:33:25,425 [DEBUG] matplotlib: platform is win32
-2025-10-07 08:33:25,496 [DEBUG] matplotlib: CACHEDIR=C:\Users\admin\.matplotlib
-2025-10-07 08:33:25,497 [DEBUG] matplotlib.font_manager: Using fontManager instance from C:\Users\admin\.matplotlib\fontlist-v390.json
-2025-10-07 08:33:43,969 [INFO] RAGPipeline: router: API
-2025-10-07 08:33:43,970 [INFO] RAGPipeline: intent: rag
-2025-10-07 08:33:43,970 [INFO] RAGPipeline: summary: {'timestamp': '07/10/2025 08:33:43', 'session_id': '9e061f58-bc82-4d6d-8b48-ce4daa985e94', 'route': 'API', 'api_type': 'time', 'llm_status': 'api_response', 'retrieved_docs': 0, 'prompt_len': 0, 'response_len': 55, 'tickers': [], 'time_filter': (1759770000, 1759856399), 'latency_ms': 337.97}
-2025-10-07 08:33:43,970 [INFO] RAGPipeline: [SUMMARY] route=API, llm=api_response, docs=0, latency=337.97ms
-2025-10-07 08:36:57,262 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
-2025-10-07 08:36:57,740 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
-2025-10-07 08:36:57,748 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
-2025-10-07 08:36:58,172 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
-2025-10-07 08:36:58,198 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
-2025-10-07 08:36:58,741 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnstock/json HTTP/1.1" 200 28728
-2025-10-07 08:36:58,844 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
-2025-10-07 08:36:59,407 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnai/json HTTP/1.1" 200 2087
-2025-10-07 08:36:59,484 [DEBUG] matplotlib: matplotlib data path: C:\Users\admin\Desktop\TT\rag_note\venv\Lib\site-packages\matplotlib\mpl-data
-2025-10-07 08:36:59,493 [DEBUG] matplotlib: CONFIGDIR=C:\Users\admin\.matplotlib
-2025-10-07 08:36:59,495 [DEBUG] matplotlib: interactive is False
-2025-10-07 08:36:59,495 [DEBUG] matplotlib: platform is win32
-2025-10-07 08:36:59,554 [DEBUG] matplotlib: CACHEDIR=C:\Users\admin\.matplotlib
-2025-10-07 08:36:59,554 [DEBUG] matplotlib.font_manager: Using fontManager instance from C:\Users\admin\.matplotlib\fontlist-v390.json
-2025-10-07 08:37:12,226 [INFO] RAGPipeline: router: API
-2025-10-07 08:37:12,226 [INFO] RAGPipeline: intent: rag
-2025-10-07 08:37:12,227 [INFO] RAGPipeline: summary: {'timestamp': '07/10/2025 08:37:12', 'session_id': 'b6712e12-e0aa-4ee0-a4be-86a0fe95871c', 'route': 'API', 'api_type': 'time', 'llm_status': 'api_response', 'retrieved_docs': 0, 'prompt_len': 0, 'response_len': 57, 'tickers': [], 'time_filter': (1759770000, 1759856399), 'latency_ms': 264.12}
-2025-10-07 08:37:12,227 [INFO] RAGPipeline: [SUMMARY] route=API, llm=api_response, docs=0, latency=264.12ms
-2025-10-07 09:03:27,281 [INFO] RAGPipeline: router: API
-2025-10-07 09:03:27,282 [INFO] RAGPipeline: intent: rag
-2025-10-07 09:03:27,282 [INFO] RAGPipeline: summary: {'timestamp': '07/10/2025 09:03:27', 'session_id': '4dee8995-c28d-4583-b7ee-e47c928c30e3', 'route': 'API', 'api_type': 'time', 'llm_status': 'api_response', 'retrieved_docs': 0, 'prompt_len': 0, 'response_len': 57, 'tickers': ['TIN'], 'time_filter': (1759770000, 1759856399), 'latency_ms': 254.32}
-2025-10-07 09:03:27,283 [INFO] RAGPipeline: [SUMMARY] route=API, llm=api_response, docs=0, latency=254.32ms
+2025-10-08 16:16:01,921 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-08 16:16:01,923 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000029CDE5EFC50>
+2025-10-08 16:16:01,923 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-08 16:16:01,924 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-08 16:16:01,924 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-08 16:16:01,925 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-08 16:16:01,925 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-08 16:16:01,928 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-type', b'application/json'), (b'content-encoding', b'zstd'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'date', b'Wed, 08 Oct 2025 09:16:01 GMT')])
+2025-10-08 16:16:01,929 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/query "HTTP/1.1 200 OK"
+2025-10-08 16:16:01,929 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-08 16:16:01,929 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-08 16:16:01,929 [DEBUG] httpcore.http11: response_closed.started
+2025-10-08 16:16:01,930 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-08 16:16:01,930 [DEBUG] httpcore.connection: close.started
+2025-10-08 16:16:01,930 [DEBUG] httpcore.connection: close.complete
+2025-10-08 16:16:48,303 [INFO] RAGPipeline: llm_status: success
+2025-10-08 16:16:48,304 [INFO] RAGPipeline: route: RAG
+2025-10-08 16:16:48,304 [INFO] RAGPipeline: llm_response_len: 356
+2025-10-08 16:16:48,304 [INFO] RAGPipeline: intent: news
+2025-10-08 16:16:48,304 [INFO] RAGPipeline: timestamp: 2025-10-08T16:16:48.304964
+2025-10-08 16:16:48,305 [INFO] RAGPipeline: summary: {'timestamp': '08/10/2025 16:16:48', 'session_id': '6c69fa5a-af02-4306-b77e-b098afa659ed', 'route': 'rag', 'api_type': None, 'llm_status': 'vector_db_success', 'retrieved_docs': 10, 'prompt_len': 6199, 'response_len': 356, 'tickers': ['TIN'], 'time_filter': (1759856400, 1759942799), 'latency_ms': 46805.02}
+2025-10-08 16:16:48,305 [INFO] RAGPipeline: [SUMMARY] route=rag, llm=vector_db_success, docs=10, latency=46805.02ms
+2025-10-08 16:17:41,546 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-08 16:17:41,547 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000029CDE64A550>
+2025-10-08 16:17:41,547 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-08 16:17:41,548 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-08 16:17:41,549 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-08 16:17:41,549 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-08 16:17:41,549 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-08 16:17:41,555 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-type', b'application/json'), (b'content-encoding', b'zstd'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'date', b'Wed, 08 Oct 2025 09:17:41 GMT')])
+2025-10-08 16:17:41,555 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/query "HTTP/1.1 200 OK"
+2025-10-08 16:17:41,555 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-08 16:17:41,555 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-08 16:17:41,555 [DEBUG] httpcore.http11: response_closed.started
+2025-10-08 16:17:41,556 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-08 16:17:41,556 [DEBUG] httpcore.connection: close.started
+2025-10-08 16:17:41,556 [DEBUG] httpcore.connection: close.complete
+2025-10-08 16:18:04,984 [INFO] RAGPipeline: llm_status: success
+2025-10-08 16:18:04,984 [INFO] RAGPipeline: route: RAG
+2025-10-08 16:18:04,984 [INFO] RAGPipeline: llm_response_len: 348
+2025-10-08 16:18:04,984 [INFO] RAGPipeline: intent: news
+2025-10-08 16:18:04,985 [INFO] RAGPipeline: timestamp: 2025-10-08T16:18:04.985206
+2025-10-08 16:18:04,985 [INFO] RAGPipeline: summary: {'timestamp': '08/10/2025 16:18:04', 'session_id': 'df6880aa-1127-408c-896b-20e52a9f6c11', 'route': 'rag', 'api_type': None, 'llm_status': 'vector_db_success', 'retrieved_docs': 10, 'prompt_len': 6199, 'response_len': 348, 'tickers': ['TIN'], 'time_filter': (1759856400, 1759942799), 'latency_ms': 23463.98}
+2025-10-08 16:18:04,985 [INFO] RAGPipeline: [SUMMARY] route=rag, llm=vector_db_success, docs=10, latency=23463.98ms
+2025-10-09 13:40:27,016 [INFO] RAGPipeline: router: API
+2025-10-09 13:40:27,017 [INFO] RAGPipeline: intent: time
+2025-10-09 13:40:27,018 [INFO] RAGPipeline: summary: {'timestamp': '09/10/2025 13:40:27', 'session_id': '969cc881-6e57-48fa-b6bc-d861b60d91fe', 'route': 'API', 'api_type': 'time', 'llm_status': 'api_response', 'retrieved_docs': 0, 'prompt_len': 0, 'response_len': 58, 'tickers': ['TIN'], 'time_filter': (1759942800, 1760029199), 'latency_ms': 317.04}
+2025-10-09 13:40:27,018 [INFO] RAGPipeline: [SUMMARY] route=API, llm=api_response, docs=0, latency=317.04ms
+2025-10-09 13:40:42,056 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-09 13:40:42,057 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000025D5E537490>
+2025-10-09 13:40:42,058 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-09 13:40:42,059 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-09 13:40:42,059 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-09 13:40:42,059 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-09 13:40:42,060 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-09 13:40:42,076 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-encoding', b'zstd'), (b'content-type', b'application/json'), (b'date', b'Thu, 09 Oct 2025 06:40:41 GMT')])
+2025-10-09 13:40:42,076 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/query "HTTP/1.1 200 OK"
+2025-10-09 13:40:42,076 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-09 13:40:42,077 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-09 13:40:42,078 [DEBUG] httpcore.http11: response_closed.started
+2025-10-09 13:40:42,078 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-09 13:40:42,078 [DEBUG] httpcore.connection: close.started
+2025-10-09 13:40:42,078 [DEBUG] httpcore.connection: close.complete
+2025-10-09 13:41:46,331 [INFO] RAGPipeline: llm_status: success
+2025-10-09 13:41:46,332 [INFO] RAGPipeline: route: RAG
+2025-10-09 13:41:46,332 [INFO] RAGPipeline: llm_response_len: 99
+2025-10-09 13:41:46,332 [INFO] RAGPipeline: intent: news
+2025-10-09 13:41:46,332 [INFO] RAGPipeline: timestamp: 2025-10-09T13:41:46.332861
+2025-10-09 13:41:46,333 [INFO] RAGPipeline: summary: {'timestamp': '09/10/2025 13:41:46', 'session_id': '969cc881-6e57-48fa-b6bc-d861b60d91fe', 'route': 'rag', 'api_type': None, 'llm_status': 'vector_db_success', 'retrieved_docs': 8, 'prompt_len': 5536, 'response_len': 99, 'tickers': ['TIN'], 'time_filter': (1759942800, 1760029199), 'latency_ms': 64672.21}
+2025-10-09 13:41:46,333 [INFO] RAGPipeline: [SUMMARY] route=rag, llm=vector_db_success, docs=8, latency=64672.21ms
+2025-10-10 08:32:09,903 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-10 08:32:09,907 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001AF0D962D50>
+2025-10-10 08:32:09,908 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-10 08:32:09,911 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-10 08:32:09,912 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-10 08:32:09,915 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-10 08:32:09,915 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-10 08:32:09,918 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-type', b'application/json'), (b'content-encoding', b'br'), (b'date', b'Fri, 10 Oct 2025 01:32:09 GMT')])
+2025-10-10 08:32:09,920 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/query "HTTP/1.1 200 OK"
+2025-10-10 08:32:09,921 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-10 08:32:09,922 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-10 08:32:09,922 [DEBUG] httpcore.http11: response_closed.started
+2025-10-10 08:32:09,923 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-10 08:32:09,924 [DEBUG] httpcore.connection: close.started
+2025-10-10 08:32:09,924 [DEBUG] httpcore.connection: close.complete
+2025-10-10 08:33:18,112 [DEBUG] RAGPipeline: llm_status: success
+2025-10-10 08:33:18,113 [DEBUG] RAGPipeline: route: RAG
+2025-10-10 08:33:18,114 [DEBUG] RAGPipeline: llm_response_len: 211
+2025-10-10 08:33:18,114 [DEBUG] RAGPipeline: intent: news
+2025-10-10 08:33:18,114 [DEBUG] RAGPipeline: timestamp: 2025-10-10T08:33:18.114298
+2025-10-10 10:32:45,244 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-10 10:32:45,248 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000002A3FF1DFC50>
+2025-10-10 10:32:45,249 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-10 10:32:45,251 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-10 10:32:45,252 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-10 10:32:45,253 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-10 10:32:45,253 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-10 10:32:45,262 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-type', b'application/json'), (b'content-encoding', b'br'), (b'date', b'Fri, 10 Oct 2025 03:32:45 GMT')])
+2025-10-10 10:32:45,262 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/query "HTTP/1.1 200 OK"
+2025-10-10 10:32:45,264 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-10 10:32:45,266 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-10 10:32:45,266 [DEBUG] httpcore.http11: response_closed.started
+2025-10-10 10:32:45,266 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-10 10:32:45,266 [DEBUG] httpcore.connection: close.started
+2025-10-10 10:32:45,269 [DEBUG] httpcore.connection: close.complete
+2025-10-10 10:32:52,823 [DEBUG] RAGPipeline: llm_status: success
+2025-10-10 10:32:52,824 [DEBUG] RAGPipeline: route: RAG
+2025-10-10 10:32:52,825 [DEBUG] RAGPipeline: llm_response_len: 45
+2025-10-10 10:32:52,826 [DEBUG] RAGPipeline: intent: news
+2025-10-10 10:32:52,826 [DEBUG] RAGPipeline: timestamp: 2025-10-10T10:32:52.826933
+2025-10-10 10:33:40,946 [DEBUG] torchao: Skipping import of cpp extensions: Could not find libtorchao_ops_aten library in any of the provided paths
+2025-10-10 10:33:41,781 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): huggingface.co:443
+2025-10-10 10:33:42,527 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/whoami-v2 HTTP/1.1" 200 378
+2025-10-10 10:33:42,530 [WARNING] huggingface_hub._login: Note: Environment variable`HF_TOKEN` is set and is the current active token independently from the token you've just configured.
+2025-10-10 10:33:43,266 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-10 10:33:43,270 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000024727D7B710>
+2025-10-10 10:33:43,270 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2025-10-10 10:33:43,270 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-10 10:33:43,270 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2025-10-10 10:33:43,270 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-10 10:33:43,270 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2025-10-10 10:33:43,276 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-type', b'application/json'), (b'content-encoding', b'br'), (b'date', b'Fri, 10 Oct 2025 03:33:43 GMT')])
+2025-10-10 10:33:43,276 [INFO] httpx: HTTP Request: GET http://localhost:6333 "HTTP/1.1 200 OK"
+2025-10-10 10:33:43,278 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2025-10-10 10:33:43,279 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-10 10:33:43,279 [DEBUG] httpcore.http11: response_closed.started
+2025-10-10 10:33:43,279 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-10 10:33:43,280 [DEBUG] httpcore.connection: close.started
+2025-10-10 10:33:43,281 [DEBUG] httpcore.connection: close.complete
+2025-10-10 10:33:43,283 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-10 10:33:43,285 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000024727D87910>
+2025-10-10 10:33:43,285 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2025-10-10 10:33:43,286 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-10 10:33:43,286 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2025-10-10 10:33:43,286 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-10 10:33:43,289 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2025-10-10 10:33:43,290 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-type', b'application/json'), (b'content-encoding', b'br'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'date', b'Fri, 10 Oct 2025 03:33:43 GMT')])
+2025-10-10 10:33:43,291 [INFO] httpx: HTTP Request: GET http://localhost:6333/collections "HTTP/1.1 200 OK"
+2025-10-10 10:33:43,292 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2025-10-10 10:33:43,292 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-10 10:33:43,298 [DEBUG] httpcore.http11: response_closed.started
+2025-10-10 10:33:43,299 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-10 10:33:43,301 [DEBUG] httpcore.connection: close.started
+2025-10-10 10:33:43,301 [DEBUG] httpcore.connection: close.complete
+2025-10-10 10:33:43,631 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/config.json HTTP/1.1" 200 0
+2025-10-10 10:33:43,766 [INFO] accelerate.utils.modeling: We will use 90% of the memory on device 0 for storing the model, and 10% for the buffer to avoid OOM. You can set `max_memory` in to a higher value to use more memory (at your own risk).
+2025-10-10 10:33:45,423 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/generation_config.json HTTP/1.1" 200 0
+2025-10-10 10:33:45,749 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/custom_generate/generate.py HTTP/1.1" 404 0
+2025-10-10 10:33:46,062 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+2025-10-10 10:33:46,419 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/google/gemma-3-1b-it/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2025-10-10 10:33:48,103 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 307 0
+2025-10-10 10:33:48,178 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/tokenizer_config.json HTTP/1.1" 200 0
+2025-10-10 10:33:48,507 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2025-10-10 10:33:48,860 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 307 0
+2025-10-10 10:33:48,934 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config.json HTTP/1.1" 200 0
+2025-10-10 10:33:49,036 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-10 10:33:49,038 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x00000247DA4399D0>
+2025-10-10 10:33:49,040 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-10 10:33:49,042 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-10 10:33:49,042 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-10 10:33:49,044 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-10 10:33:49,044 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-10 10:33:49,053 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-type', b'application/json'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-encoding', b'br'), (b'date', b'Fri, 10 Oct 2025 03:33:48 GMT')])
+2025-10-10 10:33:49,054 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/scroll "HTTP/1.1 200 OK"
+2025-10-10 10:33:49,055 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-10 10:33:49,063 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-10 10:33:49,064 [DEBUG] httpcore.http11: response_closed.started
+2025-10-10 10:33:49,064 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-10 10:33:49,065 [DEBUG] httpcore.connection: close.started
+2025-10-10 10:33:49,066 [DEBUG] httpcore.connection: close.complete
+2025-10-10 10:33:50,013 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
+2025-10-10 10:33:50,576 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
+2025-10-10 10:33:50,583 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
+2025-10-10 10:33:50,941 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
+2025-10-10 10:33:50,959 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
+2025-10-10 10:33:51,441 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnstock/json HTTP/1.1" 200 28728
+2025-10-10 10:33:51,526 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
+2025-10-10 10:33:51,997 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnai/json HTTP/1.1" 200 2087
+2025-10-10 10:33:52,071 [DEBUG] matplotlib: matplotlib data path: c:\Users\admin\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\mpl-data
+2025-10-10 10:33:52,079 [DEBUG] matplotlib: CONFIGDIR=C:\Users\admin\.matplotlib
+2025-10-10 10:33:52,111 [DEBUG] matplotlib: interactive is False
+2025-10-10 10:33:52,112 [DEBUG] matplotlib: platform is win32
+2025-10-10 10:33:52,165 [DEBUG] matplotlib: CACHEDIR=C:\Users\admin\.matplotlib
+2025-10-10 10:33:52,168 [DEBUG] matplotlib.font_manager: Using fontManager instance from C:\Users\admin\.matplotlib\fontlist-v390.json
+2025-10-10 10:33:52,645 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-10 10:33:53,270 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "GET /api//price/symbols/getAll HTTP/1.1" 200 None
+2025-10-10 10:33:53,866 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-10 10:33:53,867 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x00000247DCD94850>
+2025-10-10 10:33:53,867 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-10 10:33:53,870 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-10 10:33:53,870 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-10 10:33:53,870 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-10 10:33:53,870 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-10 10:33:53,876 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-encoding', b'br'), (b'content-type', b'application/json'), (b'date', b'Fri, 10 Oct 2025 03:33:53 GMT')])
+2025-10-10 10:33:53,876 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/query "HTTP/1.1 200 OK"
+2025-10-10 10:33:53,878 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-10 10:33:53,878 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-10 10:33:53,880 [DEBUG] httpcore.http11: response_closed.started
+2025-10-10 10:33:53,880 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-10 10:33:53,881 [DEBUG] httpcore.connection: close.started
+2025-10-10 10:33:53,881 [DEBUG] httpcore.connection: close.complete
+2025-10-10 10:34:07,333 [DEBUG] RAGPipeline: llm_status: success
+2025-10-10 10:34:07,335 [DEBUG] RAGPipeline: route: RAG
+2025-10-10 10:34:07,335 [DEBUG] RAGPipeline: llm_response_len: 272
+2025-10-10 10:34:07,336 [DEBUG] RAGPipeline: intent: news
+2025-10-10 10:34:07,336 [DEBUG] RAGPipeline: timestamp: 2025-10-10T10:34:07.336967
+2025-10-11 18:24:46,935 [DEBUG] torchao: Skipping import of cpp extensions: Could not find libtorchao_ops_aten library in any of the provided paths
+2025-10-11 18:24:48,684 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): huggingface.co:443
+2025-10-11 18:24:49,908 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/whoami-v2 HTTP/1.1" 200 378
+2025-10-11 18:24:49,917 [WARNING] huggingface_hub._login: Note: Environment variable`HF_TOKEN` is set and is the current active token independently from the token you've just configured.
+2025-10-11 18:24:51,066 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:24:55,137 [DEBUG] httpcore.connection: connect_tcp.failed exception=ConnectError(ConnectionRefusedError(10061, 'No connection could be made because the target machine actively refused it', None, 10061, None))
+2025-10-11 18:24:55,139 [DEBUG] root: Unable to get server version: [WinError 10061] No connection could be made because the target machine actively refused it, server version defaults to None
+2025-10-11 18:24:55,140 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:24:59,217 [DEBUG] httpcore.connection: connect_tcp.failed exception=ConnectError(ConnectionRefusedError(10061, 'No connection could be made because the target machine actively refused it', None, 10061, None))
+2025-10-11 18:25:31,209 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/whoami-v2 HTTP/1.1" 200 378
+2025-10-11 18:25:31,213 [WARNING] huggingface_hub._login: Note: Environment variable`HF_TOKEN` is set and is the current active token independently from the token you've just configured.
+2025-10-11 18:25:31,981 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:25:33,522 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000026D3E546A90>
+2025-10-11 18:25:33,525 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2025-10-11 18:25:33,528 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:25:33,529 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2025-10-11 18:25:33,530 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:25:33,531 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2025-10-11 18:25:33,533 [DEBUG] httpcore.http11: receive_response_headers.failed exception=ReadError(ConnectionAbortedError(10053, 'An established connection was aborted by the software in your host machine', None, 10053, None))
+2025-10-11 18:25:33,534 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:25:33,535 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:25:33,536 [DEBUG] root: Unable to get server version: [WinError 10053] An established connection was aborted by the software in your host machine, server version defaults to None
+2025-10-11 18:25:33,540 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:25:33,544 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000026D3E58D890>
+2025-10-11 18:25:33,546 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2025-10-11 18:25:33,549 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:25:33,550 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2025-10-11 18:25:33,552 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:25:33,553 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2025-10-11 18:25:33,554 [DEBUG] httpcore.http11: receive_response_headers.failed exception=RemoteProtocolError('Server disconnected without sending a response.')
+2025-10-11 18:25:33,557 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:25:33,558 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:26:19,402 [DEBUG] torchao: Skipping import of cpp extensions: Could not find libtorchao_ops_aten library in any of the provided paths
+2025-10-11 18:26:20,309 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): huggingface.co:443
+2025-10-11 18:26:21,086 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/whoami-v2 HTTP/1.1" 200 378
+2025-10-11 18:26:21,097 [WARNING] huggingface_hub._login: Note: Environment variable`HF_TOKEN` is set and is the current active token independently from the token you've just configured.
+2025-10-11 18:26:21,829 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:26:21,853 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x00000251800079D0>
+2025-10-11 18:26:21,854 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2025-10-11 18:26:21,856 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:26:21,856 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2025-10-11 18:26:21,857 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:26:21,857 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2025-10-11 18:26:21,858 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-type', b'application/json'), (b'content-encoding', b'br'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'date', b'Sat, 11 Oct 2025 11:26:21 GMT')])
+2025-10-11 18:26:21,860 [INFO] httpx: HTTP Request: GET http://localhost:6333 "HTTP/1.1 200 OK"
+2025-10-11 18:26:21,860 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2025-10-11 18:26:21,862 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:26:21,863 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:26:21,863 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:26:21,864 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:26:21,864 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:26:21,866 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:26:21,868 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000025180017AD0>
+2025-10-11 18:26:21,870 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2025-10-11 18:26:21,871 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:26:21,873 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2025-10-11 18:26:21,874 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:26:21,875 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2025-10-11 18:26:21,876 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-type', b'application/json'), (b'content-encoding', b'br'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'date', b'Sat, 11 Oct 2025 11:26:21 GMT')])
+2025-10-11 18:26:21,877 [INFO] httpx: HTTP Request: GET http://localhost:6333/collections "HTTP/1.1 200 OK"
+2025-10-11 18:26:21,879 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2025-10-11 18:26:21,881 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:26:21,881 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:26:21,883 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:26:21,883 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:26:21,883 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:26:22,684 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/config.json HTTP/1.1" 200 0
+2025-10-11 18:26:22,925 [INFO] accelerate.utils.modeling: We will use 90% of the memory on device 0 for storing the model, and 10% for the buffer to avoid OOM. You can set `max_memory` in to a higher value to use more memory (at your own risk).
+2025-10-11 18:26:26,564 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/generation_config.json HTTP/1.1" 200 0
+2025-10-11 18:26:26,900 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/custom_generate/generate.py HTTP/1.1" 404 0
+2025-10-11 18:26:27,243 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+2025-10-11 18:26:27,657 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/google/gemma-3-1b-it/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2025-10-11 18:26:29,851 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 307 0
+2025-10-11 18:26:29,931 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/tokenizer_config.json HTTP/1.1" 200 0
+2025-10-11 18:26:30,263 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2025-10-11 18:26:30,637 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 307 0
+2025-10-11 18:26:30,711 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config.json HTTP/1.1" 200 0
+2025-10-11 18:26:31,063 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:26:31,066 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x00000252853F3FD0>
+2025-10-11 18:26:31,067 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-11 18:26:31,068 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:26:31,069 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-11 18:26:31,071 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:26:31,072 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-11 18:26:31,095 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-type', b'application/json'), (b'content-encoding', b'br'), (b'date', b'Sat, 11 Oct 2025 11:26:30 GMT')])
+2025-10-11 18:26:31,096 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/scroll "HTTP/1.1 200 OK"
+2025-10-11 18:26:31,097 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-11 18:26:31,114 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:26:31,115 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:26:31,116 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:26:31,116 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:26:31,117 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:26:32,307 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
+2025-10-11 18:26:32,760 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
+2025-10-11 18:26:32,764 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
+2025-10-11 18:26:33,162 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
+2025-10-11 18:26:33,203 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
+2025-10-11 18:26:33,757 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnstock/json HTTP/1.1" 200 28728
+2025-10-11 18:26:33,855 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
+2025-10-11 18:26:34,455 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnai/json HTTP/1.1" 200 2087
+2025-10-11 18:26:34,627 [DEBUG] matplotlib: matplotlib data path: c:\Users\admin\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\mpl-data
+2025-10-11 18:26:34,634 [DEBUG] matplotlib: CONFIGDIR=C:\Users\admin\.matplotlib
+2025-10-11 18:26:34,662 [DEBUG] matplotlib: interactive is False
+2025-10-11 18:26:34,663 [DEBUG] matplotlib: platform is win32
+2025-10-11 18:26:34,735 [DEBUG] matplotlib: CACHEDIR=C:\Users\admin\.matplotlib
+2025-10-11 18:26:34,739 [DEBUG] matplotlib.font_manager: Using fontManager instance from C:\Users\admin\.matplotlib\fontlist-v390.json
+2025-10-11 18:26:35,852 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:26:36,343 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "GET /api//price/symbols/getAll HTTP/1.1" 200 None
+2025-10-11 18:26:37,644 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:26:37,645 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000002528738C350>
+2025-10-11 18:26:37,647 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-11 18:26:37,648 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:26:37,649 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-11 18:26:37,651 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:26:37,655 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-11 18:26:37,668 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-encoding', b'br'), (b'content-type', b'application/json'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'date', b'Sat, 11 Oct 2025 11:26:37 GMT')])
+2025-10-11 18:26:37,670 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/query "HTTP/1.1 200 OK"
+2025-10-11 18:26:37,671 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-11 18:26:37,673 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:26:37,674 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:26:37,675 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:26:37,676 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:26:37,677 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:27:06,222 [DEBUG] RAGPipeline: llm_status: success
+2025-10-11 18:27:06,224 [DEBUG] RAGPipeline: route: RAG
+2025-10-11 18:27:06,224 [DEBUG] RAGPipeline: llm_response_len: 58
+2025-10-11 18:27:06,226 [DEBUG] RAGPipeline: intent: news
+2025-10-11 18:27:06,227 [DEBUG] RAGPipeline: timestamp: 2025-10-11T18:27:06.227353
+2025-10-11 18:34:16,438 [DEBUG] torchao: Skipping import of cpp extensions: Could not find libtorchao_ops_aten library in any of the provided paths
+2025-10-11 18:34:17,368 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): huggingface.co:443
+2025-10-11 18:34:18,106 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/whoami-v2 HTTP/1.1" 200 378
+2025-10-11 18:34:18,110 [WARNING] huggingface_hub._login: Note: Environment variable`HF_TOKEN` is set and is the current active token independently from the token you've just configured.
+2025-10-11 18:34:18,870 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:34:18,872 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000020DBFC17B10>
+2025-10-11 18:34:18,873 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2025-10-11 18:34:18,875 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:34:18,875 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2025-10-11 18:34:18,876 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:34:18,877 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2025-10-11 18:34:18,878 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-encoding', b'br'), (b'content-type', b'application/json'), (b'date', b'Sat, 11 Oct 2025 11:34:18 GMT')])
+2025-10-11 18:34:18,879 [INFO] httpx: HTTP Request: GET http://localhost:6333 "HTTP/1.1 200 OK"
+2025-10-11 18:34:18,880 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2025-10-11 18:34:18,880 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:34:18,882 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:34:18,882 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:34:18,883 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:34:18,883 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:34:18,885 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:34:18,886 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000020DBFC17E50>
+2025-10-11 18:34:18,888 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2025-10-11 18:34:18,891 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:34:18,892 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2025-10-11 18:34:18,893 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:34:18,893 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2025-10-11 18:34:18,894 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-type', b'application/json'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-encoding', b'br'), (b'date', b'Sat, 11 Oct 2025 11:34:18 GMT')])
+2025-10-11 18:34:18,895 [INFO] httpx: HTTP Request: GET http://localhost:6333/collections "HTTP/1.1 200 OK"
+2025-10-11 18:34:18,896 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2025-10-11 18:34:18,898 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:34:18,899 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:34:18,899 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:34:18,900 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:34:18,901 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:34:19,227 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/config.json HTTP/1.1" 200 0
+2025-10-11 18:34:19,384 [INFO] accelerate.utils.modeling: We will use 90% of the memory on device 0 for storing the model, and 10% for the buffer to avoid OOM. You can set `max_memory` in to a higher value to use more memory (at your own risk).
+2025-10-11 18:34:21,099 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/generation_config.json HTTP/1.1" 200 0
+2025-10-11 18:34:21,413 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/custom_generate/generate.py HTTP/1.1" 404 0
+2025-10-11 18:34:21,734 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+2025-10-11 18:34:22,073 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/google/gemma-3-1b-it/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2025-10-11 18:34:23,877 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 307 0
+2025-10-11 18:34:23,946 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/tokenizer_config.json HTTP/1.1" 200 0
+2025-10-11 18:34:24,260 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2025-10-11 18:34:24,597 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 307 0
+2025-10-11 18:34:24,662 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config.json HTTP/1.1" 200 0
+2025-10-11 18:34:24,828 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:34:24,832 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000020DC0D5FA10>
+2025-10-11 18:34:24,833 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-11 18:34:24,835 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:34:24,837 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-11 18:34:24,839 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:34:24,841 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-11 18:34:24,869 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-type', b'application/json'), (b'content-encoding', b'br'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'date', b'Sat, 11 Oct 2025 11:34:24 GMT')])
+2025-10-11 18:34:24,870 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/scroll "HTTP/1.1 200 OK"
+2025-10-11 18:34:24,871 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-11 18:34:24,902 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:34:24,904 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:34:24,905 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:34:24,906 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:34:24,907 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:34:26,128 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
+2025-10-11 18:34:26,647 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
+2025-10-11 18:34:26,650 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
+2025-10-11 18:34:27,023 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
+2025-10-11 18:34:27,042 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
+2025-10-11 18:34:27,461 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnstock/json HTTP/1.1" 200 28728
+2025-10-11 18:34:27,536 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
+2025-10-11 18:34:27,961 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnai/json HTTP/1.1" 200 2087
+2025-10-11 18:34:28,037 [DEBUG] matplotlib: matplotlib data path: c:\Users\admin\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\mpl-data
+2025-10-11 18:34:28,044 [DEBUG] matplotlib: CONFIGDIR=C:\Users\admin\.matplotlib
+2025-10-11 18:34:28,074 [DEBUG] matplotlib: interactive is False
+2025-10-11 18:34:28,076 [DEBUG] matplotlib: platform is win32
+2025-10-11 18:34:28,133 [DEBUG] matplotlib: CACHEDIR=C:\Users\admin\.matplotlib
+2025-10-11 18:34:28,137 [DEBUG] matplotlib.font_manager: Using fontManager instance from C:\Users\admin\.matplotlib\fontlist-v390.json
+2025-10-11 18:34:28,626 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:34:29,227 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "GET /api//price/symbols/getAll HTTP/1.1" 200 None
+2025-10-11 18:34:29,859 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:34:29,881 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x0000020DF2FC8750>
+2025-10-11 18:34:29,882 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-11 18:34:29,884 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:34:29,886 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-11 18:34:29,887 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:34:29,888 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-11 18:34:29,893 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-type', b'application/json'), (b'content-encoding', b'br'), (b'date', b'Sat, 11 Oct 2025 11:34:29 GMT')])
+2025-10-11 18:34:29,894 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/query "HTTP/1.1 200 OK"
+2025-10-11 18:34:29,895 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-11 18:34:29,898 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:34:29,899 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:34:29,899 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:34:29,901 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:34:29,902 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:35:08,898 [DEBUG] RAGPipeline: llm_status: success
+2025-10-11 18:35:08,899 [DEBUG] RAGPipeline: route: RAG
+2025-10-11 18:35:08,900 [DEBUG] RAGPipeline: llm_response_len: 249
+2025-10-11 18:35:08,901 [DEBUG] RAGPipeline: intent: news
+2025-10-11 18:35:08,901 [DEBUG] RAGPipeline: timestamp: 2025-10-11T18:35:08.901604
+2025-10-11 18:39:05,964 [DEBUG] torchao: Skipping import of cpp extensions: Could not find libtorchao_ops_aten library in any of the provided paths
+2025-10-11 18:39:06,930 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): huggingface.co:443
+2025-10-11 18:39:07,686 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/whoami-v2 HTTP/1.1" 200 378
+2025-10-11 18:39:07,689 [WARNING] huggingface_hub._login: Note: Environment variable`HF_TOKEN` is set and is the current active token independently from the token you've just configured.
+2025-10-11 18:39:08,451 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:39:08,453 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001A38FB77C90>
+2025-10-11 18:39:08,454 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2025-10-11 18:39:08,456 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:39:08,457 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2025-10-11 18:39:08,457 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:39:08,458 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2025-10-11 18:39:08,460 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-encoding', b'br'), (b'content-type', b'application/json'), (b'date', b'Sat, 11 Oct 2025 11:39:08 GMT')])
+2025-10-11 18:39:08,461 [INFO] httpx: HTTP Request: GET http://localhost:6333 "HTTP/1.1 200 OK"
+2025-10-11 18:39:08,462 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2025-10-11 18:39:08,462 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:39:08,463 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:39:08,464 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:39:08,466 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:39:08,467 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:39:08,467 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:39:08,469 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001A38FB879D0>
+2025-10-11 18:39:08,470 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2025-10-11 18:39:08,472 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:39:08,472 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2025-10-11 18:39:08,473 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:39:08,474 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2025-10-11 18:39:08,475 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-encoding', b'br'), (b'content-type', b'application/json'), (b'date', b'Sat, 11 Oct 2025 11:39:08 GMT')])
+2025-10-11 18:39:08,476 [INFO] httpx: HTTP Request: GET http://localhost:6333/collections "HTTP/1.1 200 OK"
+2025-10-11 18:39:08,477 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2025-10-11 18:39:08,479 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:39:08,481 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:39:08,482 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:39:08,482 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:39:08,482 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:39:08,802 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/config.json HTTP/1.1" 200 0
+2025-10-11 18:39:08,950 [INFO] accelerate.utils.modeling: We will use 90% of the memory on device 0 for storing the model, and 10% for the buffer to avoid OOM. You can set `max_memory` in to a higher value to use more memory (at your own risk).
+2025-10-11 18:39:10,628 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/generation_config.json HTTP/1.1" 200 0
+2025-10-11 18:39:10,946 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/custom_generate/generate.py HTTP/1.1" 404 0
+2025-10-11 18:39:11,278 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+2025-10-11 18:39:11,623 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/google/gemma-3-1b-it/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2025-10-11 18:39:13,431 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 307 0
+2025-10-11 18:39:13,501 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/tokenizer_config.json HTTP/1.1" 200 0
+2025-10-11 18:39:13,826 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2025-10-11 18:39:14,169 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 307 0
+2025-10-11 18:39:14,238 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config.json HTTP/1.1" 200 0
+2025-10-11 18:39:14,386 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:39:14,389 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001A38E2F30D0>
+2025-10-11 18:39:14,390 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-11 18:39:14,392 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:39:14,392 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-11 18:39:14,395 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:39:14,396 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-11 18:39:14,418 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-type', b'application/json'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-encoding', b'br'), (b'date', b'Sat, 11 Oct 2025 11:39:14 GMT')])
+2025-10-11 18:39:14,419 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/scroll "HTTP/1.1 200 OK"
+2025-10-11 18:39:14,419 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-11 18:39:14,438 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:39:14,440 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:39:14,441 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:39:14,442 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:39:14,442 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:39:15,813 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
+2025-10-11 18:39:16,220 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
+2025-10-11 18:39:16,224 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
+2025-10-11 18:39:16,612 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
+2025-10-11 18:39:16,630 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
+2025-10-11 18:39:17,117 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnstock/json HTTP/1.1" 200 28728
+2025-10-11 18:39:17,196 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
+2025-10-11 18:39:17,638 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnai/json HTTP/1.1" 200 2087
+2025-10-11 18:39:17,715 [DEBUG] matplotlib: matplotlib data path: c:\Users\admin\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\mpl-data
+2025-10-11 18:39:17,722 [DEBUG] matplotlib: CONFIGDIR=C:\Users\admin\.matplotlib
+2025-10-11 18:39:17,751 [DEBUG] matplotlib: interactive is False
+2025-10-11 18:39:17,753 [DEBUG] matplotlib: platform is win32
+2025-10-11 18:39:17,815 [DEBUG] matplotlib: CACHEDIR=C:\Users\admin\.matplotlib
+2025-10-11 18:39:17,819 [DEBUG] matplotlib.font_manager: Using fontManager instance from C:\Users\admin\.matplotlib\fontlist-v390.json
+2025-10-11 18:39:18,299 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:39:19,016 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "GET /api//price/symbols/getAll HTTP/1.1" 200 None
+2025-10-11 18:39:19,640 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:39:19,643 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001A45CA48C50>
+2025-10-11 18:39:19,644 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-11 18:39:19,646 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:39:19,646 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-11 18:39:19,648 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:39:19,649 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-11 18:39:19,654 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-type', b'application/json'), (b'content-encoding', b'br'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'date', b'Sat, 11 Oct 2025 11:39:19 GMT')])
+2025-10-11 18:39:19,655 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/query "HTTP/1.1 200 OK"
+2025-10-11 18:39:19,656 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-11 18:39:19,659 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:39:19,661 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:39:19,662 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:39:19,663 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:39:19,663 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:39:29,666 [DEBUG] RAGPipeline: llm_status: success
+2025-10-11 18:39:29,667 [DEBUG] RAGPipeline: route: RAG
+2025-10-11 18:39:29,667 [DEBUG] RAGPipeline: llm_response_len: 52
+2025-10-11 18:39:29,668 [DEBUG] RAGPipeline: intent: news
+2025-10-11 18:39:29,668 [DEBUG] RAGPipeline: timestamp: 2025-10-11T18:39:29.668710
+2025-10-11 18:40:39,149 [DEBUG] torchao: Skipping import of cpp extensions: Could not find libtorchao_ops_aten library in any of the provided paths
+2025-10-11 18:40:40,117 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): huggingface.co:443
+2025-10-11 18:40:40,866 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/whoami-v2 HTTP/1.1" 200 378
+2025-10-11 18:40:40,870 [WARNING] huggingface_hub._login: Note: Environment variable`HF_TOKEN` is set and is the current active token independently from the token you've just configured.
+2025-10-11 18:40:41,624 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:40:41,626 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001FBE24641D0>
+2025-10-11 18:40:41,627 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2025-10-11 18:40:41,629 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:40:41,631 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2025-10-11 18:40:41,632 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:40:41,632 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2025-10-11 18:40:41,633 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-type', b'application/json'), (b'content-encoding', b'br'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'date', b'Sat, 11 Oct 2025 11:40:41 GMT')])
+2025-10-11 18:40:41,634 [INFO] httpx: HTTP Request: GET http://localhost:6333 "HTTP/1.1 200 OK"
+2025-10-11 18:40:41,635 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2025-10-11 18:40:41,636 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:40:41,637 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:40:41,637 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:40:41,638 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:40:41,639 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:40:41,640 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:40:41,642 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001FBE2467CD0>
+2025-10-11 18:40:41,642 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'GET']>
+2025-10-11 18:40:41,645 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:40:41,646 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'GET']>
+2025-10-11 18:40:41,647 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:40:41,647 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'GET']>
+2025-10-11 18:40:41,648 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-type', b'application/json'), (b'content-encoding', b'br'), (b'date', b'Sat, 11 Oct 2025 11:40:41 GMT')])
+2025-10-11 18:40:41,649 [INFO] httpx: HTTP Request: GET http://localhost:6333/collections "HTTP/1.1 200 OK"
+2025-10-11 18:40:41,650 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'GET']>
+2025-10-11 18:40:41,651 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:40:41,652 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:40:41,652 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:40:41,654 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:40:41,654 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:40:42,001 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/config.json HTTP/1.1" 200 0
+2025-10-11 18:40:42,154 [INFO] accelerate.utils.modeling: We will use 90% of the memory on device 0 for storing the model, and 10% for the buffer to avoid OOM. You can set `max_memory` in to a higher value to use more memory (at your own risk).
+2025-10-11 18:40:43,888 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/generation_config.json HTTP/1.1" 200 0
+2025-10-11 18:40:44,217 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/custom_generate/generate.py HTTP/1.1" 404 0
+2025-10-11 18:40:44,545 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /google/gemma-3-1b-it/resolve/main/tokenizer_config.json HTTP/1.1" 200 0
+2025-10-11 18:40:44,884 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/google/gemma-3-1b-it/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2025-10-11 18:40:46,678 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/1.1" 307 0
+2025-10-11 18:40:46,747 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/tokenizer_config.json HTTP/1.1" 200 0
+2025-10-11 18:40:47,074 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/tree/main/additional_chat_templates?recursive=False&expand=False HTTP/1.1" 404 64
+2025-10-11 18:40:47,423 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/1.1" 307 0
+2025-10-11 18:40:47,495 [DEBUG] urllib3.connectionpool: https://huggingface.co:443 "HEAD /api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config.json HTTP/1.1" 200 0
+2025-10-11 18:40:47,609 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:40:47,611 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001FC6780AE10>
+2025-10-11 18:40:47,612 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-11 18:40:47,614 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:40:47,614 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-11 18:40:47,616 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:40:47,617 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-11 18:40:47,637 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-encoding', b'br'), (b'content-type', b'application/json'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'date', b'Sat, 11 Oct 2025 11:40:47 GMT')])
+2025-10-11 18:40:47,639 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/scroll "HTTP/1.1 200 OK"
+2025-10-11 18:40:47,640 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-11 18:40:47,655 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:40:47,656 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:40:47,658 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:40:47,659 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:40:47,660 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:40:48,800 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
+2025-10-11 18:40:49,228 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
+2025-10-11 18:40:49,231 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): hq.vnstocks.com:443
+2025-10-11 18:40:49,597 [DEBUG] urllib3.connectionpool: https://hq.vnstocks.com:443 "POST /analytics HTTP/1.1" 502 166
+2025-10-11 18:40:49,615 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
+2025-10-11 18:40:50,092 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnstock/json HTTP/1.1" 200 28728
+2025-10-11 18:40:50,172 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): pypi.org:443
+2025-10-11 18:40:50,658 [DEBUG] urllib3.connectionpool: https://pypi.org:443 "GET /pypi/vnai/json HTTP/1.1" 200 2087
+2025-10-11 18:40:50,735 [DEBUG] matplotlib: matplotlib data path: c:\Users\admin\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\mpl-data
+2025-10-11 18:40:50,741 [DEBUG] matplotlib: CONFIGDIR=C:\Users\admin\.matplotlib
+2025-10-11 18:40:50,770 [DEBUG] matplotlib: interactive is False
+2025-10-11 18:40:50,772 [DEBUG] matplotlib: platform is win32
+2025-10-11 18:40:50,829 [DEBUG] matplotlib: CACHEDIR=C:\Users\admin\.matplotlib
+2025-10-11 18:40:50,833 [DEBUG] matplotlib.font_manager: Using fontManager instance from C:\Users\admin\.matplotlib\fontlist-v390.json
+2025-10-11 18:40:51,328 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:40:51,924 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "GET /api//price/symbols/getAll HTTP/1.1" 200 None
+2025-10-11 18:40:52,527 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:40:52,529 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001FC6BEDC5D0>
+2025-10-11 18:40:52,530 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-11 18:40:52,532 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:40:52,532 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-11 18:40:52,535 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:40:52,535 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-11 18:40:52,539 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-encoding', b'br'), (b'content-type', b'application/json'), (b'date', b'Sat, 11 Oct 2025 11:40:52 GMT')])
+2025-10-11 18:40:52,541 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/query "HTTP/1.1 200 OK"
+2025-10-11 18:40:52,542 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-11 18:40:52,546 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:40:52,547 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:40:52,547 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:40:52,548 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:40:52,548 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:41:05,867 [DEBUG] RAGPipeline: llm_status: success
+2025-10-11 18:41:05,868 [DEBUG] RAGPipeline: route: RAG
+2025-10-11 18:41:05,868 [DEBUG] RAGPipeline: llm_response_len: 127
+2025-10-11 18:41:05,869 [DEBUG] RAGPipeline: intent: news
+2025-10-11 18:41:05,870 [DEBUG] RAGPipeline: timestamp: 2025-10-11T18:41:05.870518
+2025-10-11 18:41:39,931 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:41:40,493 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "POST /api/price/symbols/getList HTTP/1.1" 200 None
+2025-10-11 18:41:40,524 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:41:41,034 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "POST /api/price/symbols/getList HTTP/1.1" 200 None
+2025-10-11 18:41:41,043 [DEBUG] RAGPipeline: router: API
+2025-10-11 18:41:41,044 [DEBUG] RAGPipeline: intent: stock
+2025-10-11 18:42:10,302 [DEBUG] RAGPipeline: router: API
+2025-10-11 18:42:10,303 [DEBUG] RAGPipeline: intent: stock
+2025-10-11 18:43:46,419 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:43:46,986 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "POST /api/price/symbols/getList HTTP/1.1" 200 None
+2025-10-11 18:43:47,008 [INFO] RAGPipeline: router: API
+2025-10-11 18:43:47,009 [INFO] RAGPipeline: intent: stock
+2025-10-11 18:43:47,009 [INFO] RAGPipeline: summary: {'timestamp': '11/10/2025 18:43:47', 'session_id': '2ba2fe9f-3eb0-4473-b458-d6793ee12cc8', 'route': 'API', 'api_type': 'stock', 'llm_status': 'api_response', 'retrieved_docs': 0, 'prompt_len': 0, 'response_len': 185, 'tickers': ['VCB'], 'time_filter': (1760115600, 1760201999), 'latency_ms': 1127.39}
+2025-10-11 18:43:47,009 [INFO] RAGPipeline: [SUMMARY] route=API, llm=api_response, docs=0, latency=1127.39ms
+2025-10-11 18:50:41,749 [INFO] RAGPipeline: router: API
+2025-10-11 18:50:41,749 [INFO] RAGPipeline: intent: time
+2025-10-11 18:50:41,750 [INFO] RAGPipeline: summary: {'timestamp': '11/10/2025 18:50:41', 'session_id': '6b9616aa-607e-4c3b-aeff-28c1f5cb9c5c', 'route': 'API', 'api_type': 'time', 'llm_status': 'api_response', 'retrieved_docs': 0, 'prompt_len': 0, 'response_len': 58, 'tickers': ['VCB'], 'time_filter': (1760115600, 1760201999), 'latency_ms': 273.82}
+2025-10-11 18:50:41,750 [INFO] RAGPipeline: [SUMMARY] route=API, llm=api_response, docs=0, latency=273.82ms
+2025-10-11 18:50:53,549 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:50:54,259 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "POST /api/price/symbols/getList HTTP/1.1" 200 None
+2025-10-11 18:50:54,268 [INFO] RAGPipeline: router: API
+2025-10-11 18:50:54,268 [INFO] RAGPipeline: intent: stock
+2025-10-11 18:50:54,270 [INFO] RAGPipeline: summary: {'timestamp': '11/10/2025 18:50:54', 'session_id': '6b9616aa-607e-4c3b-aeff-28c1f5cb9c5c', 'route': 'API', 'api_type': 'stock', 'llm_status': 'api_response', 'retrieved_docs': 0, 'prompt_len': 0, 'response_len': 185, 'tickers': ['VCB'], 'time_filter': (1760115600, 1760201999), 'latency_ms': 732.36}
+2025-10-11 18:50:54,270 [INFO] RAGPipeline: [SUMMARY] route=API, llm=api_response, docs=0, latency=732.36ms
+2025-10-11 18:54:42,619 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:54:43,234 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "POST /api/price/symbols/getList HTTP/1.1" 200 None
+2025-10-11 18:54:43,243 [INFO] RAGPipeline: router: API
+2025-10-11 18:54:43,243 [INFO] RAGPipeline: intent: stock
+2025-10-11 18:54:43,244 [INFO] RAGPipeline: summary: {'timestamp': '11/10/2025 18:54:43', 'session_id': 'b442e3ff-53cf-4e93-a1ff-066ad5a6e849', 'route': 'API', 'api_type': 'stock', 'llm_status': 'api_response', 'retrieved_docs': 0, 'prompt_len': 0, 'response_len': 189, 'tickers': ['VCB'], 'time_filter': (1760115600, 1760201999), 'latency_ms': 889.67}
+2025-10-11 18:54:43,244 [INFO] RAGPipeline: [SUMMARY] route=API, llm=api_response, docs=0, latency=889.67ms
+2025-10-11 18:58:02,090 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:58:02,675 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "POST /api/price/symbols/getList HTTP/1.1" 200 None
+2025-10-11 18:58:02,683 [INFO] RAGPipeline: router: API
+2025-10-11 18:58:02,684 [INFO] RAGPipeline: intent: stock
+2025-10-11 18:58:02,685 [INFO] RAGPipeline: summary: {'timestamp': '11/10/2025 18:58:02', 'session_id': '1519be6a-bdc7-46cf-b500-bc5e2d67c9a0', 'route': 'API', 'api_type': 'stock', 'llm_status': 'api_response', 'retrieved_docs': 0, 'prompt_len': 0, 'response_len': 193, 'tickers': ['VCB'], 'time_filter': (1760115600, 1760201999), 'latency_ms': 844.34}
+2025-10-11 18:58:02,685 [INFO] RAGPipeline: [SUMMARY] route=API, llm=api_response, docs=0, latency=844.34ms
+2025-10-11 18:58:20,973 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:58:21,564 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "POST /api/chart/OHLCChart/gap HTTP/1.1" 200 None
+2025-10-11 18:58:21,590 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:58:22,182 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "POST /api/chart/OHLCChart/gap HTTP/1.1" 200 None
+2025-10-11 18:58:22,191 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:58:22,823 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "POST /api/chart/OHLCChart/gap HTTP/1.1" 200 None
+2025-10-11 18:58:24,828 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:58:25,519 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "POST /api/chart/OHLCChart/gap HTTP/1.1" 200 None
+2025-10-11 18:58:27,524 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 18:58:28,123 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "POST /api/chart/OHLCChart/gap HTTP/1.1" 200 None
+2025-10-11 18:58:28,128 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): apipubaws.tcbs.com.vn:443
+2025-10-11 18:58:30,826 [DEBUG] urllib3.connectionpool: https://apipubaws.tcbs.com.vn:443 "POST /ligo/v1/watchlist/preview HTTP/1.1" 200 None
+2025-10-11 18:58:31,466 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): apipubaws.tcbs.com.vn:443
+2025-10-11 18:58:34,110 [DEBUG] urllib3.connectionpool: https://apipubaws.tcbs.com.vn:443 "POST /ligo/v1/watchlist/preview HTTP/1.1" 200 None
+2025-10-11 18:58:34,743 [INFO] RAGPipeline: router: API
+2025-10-11 18:58:34,743 [INFO] RAGPipeline: intent: market
+2025-10-11 18:58:34,744 [INFO] RAGPipeline: summary: {'timestamp': '11/10/2025 18:58:34', 'session_id': '1519be6a-bdc7-46cf-b500-bc5e2d67c9a0', 'route': 'API', 'api_type': 'market', 'llm_status': 'api_response', 'retrieved_docs': 0, 'prompt_len': 0, 'response_len': 340, 'tickers': [], 'time_filter': None, 'latency_ms': 13783.37}
+2025-10-11 18:58:34,744 [INFO] RAGPipeline: [SUMMARY] route=API, llm=api_response, docs=0, latency=13783.37ms
+2025-10-11 18:59:04,262 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 18:59:04,264 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001AE706D0750>
+2025-10-11 18:59:04,264 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-11 18:59:04,265 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 18:59:04,265 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-11 18:59:04,267 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 18:59:04,267 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-11 18:59:04,273 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'content-type', b'application/json'), (b'content-encoding', b'zstd'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'date', b'Sat, 11 Oct 2025 11:59:04 GMT')])
+2025-10-11 18:59:04,273 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/query "HTTP/1.1 200 OK"
+2025-10-11 18:59:04,273 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-11 18:59:04,275 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 18:59:04,275 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 18:59:04,275 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 18:59:04,275 [DEBUG] httpcore.connection: close.started
+2025-10-11 18:59:04,276 [DEBUG] httpcore.connection: close.complete
+2025-10-11 18:59:51,137 [INFO] RAGPipeline: llm_status: success
+2025-10-11 18:59:51,137 [INFO] RAGPipeline: route: RAG
+2025-10-11 18:59:51,137 [INFO] RAGPipeline: llm_response_len: 210
+2025-10-11 18:59:51,137 [INFO] RAGPipeline: intent: news
+2025-10-11 18:59:51,137 [INFO] RAGPipeline: timestamp: 2025-10-11T18:59:51.137158
+2025-10-11 18:59:51,138 [INFO] RAGPipeline: summary: {'timestamp': '11/10/2025 18:59:51', 'session_id': '1519be6a-bdc7-46cf-b500-bc5e2d67c9a0', 'route': 'rag', 'api_type': 'market_news', 'llm_status': 'retriever_success', 'retrieved_docs': 1, 'prompt_len': 3842, 'response_len': 210, 'tickers': ['TIN'], 'time_filter': None, 'latency_ms': 47212.44}
+2025-10-11 18:59:51,138 [INFO] RAGPipeline: [SUMMARY] route=rag, llm=retriever_success, docs=1, latency=47212.44ms
+2025-10-11 19:00:26,629 [DEBUG] httpcore.connection: connect_tcp.started host='localhost' port=6333 local_address=None timeout=5.0 socket_options=None
+2025-10-11 19:00:26,644 [DEBUG] httpcore.connection: connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001AE888017D0>
+2025-10-11 19:00:26,644 [DEBUG] httpcore.http11: send_request_headers.started request=<Request [b'POST']>
+2025-10-11 19:00:26,645 [DEBUG] httpcore.http11: send_request_headers.complete
+2025-10-11 19:00:26,645 [DEBUG] httpcore.http11: send_request_body.started request=<Request [b'POST']>
+2025-10-11 19:00:26,646 [DEBUG] httpcore.http11: send_request_body.complete
+2025-10-11 19:00:26,646 [DEBUG] httpcore.http11: receive_response_headers.started request=<Request [b'POST']>
+2025-10-11 19:00:26,653 [DEBUG] httpcore.http11: receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'transfer-encoding', b'chunked'), (b'vary', b'accept-encoding, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'), (b'content-type', b'application/json'), (b'content-encoding', b'zstd'), (b'date', b'Sat, 11 Oct 2025 12:00:26 GMT')])
+2025-10-11 19:00:26,653 [INFO] httpx: HTTP Request: POST http://localhost:6333/collections/cafef_articles/points/query "HTTP/1.1 200 OK"
+2025-10-11 19:00:26,654 [DEBUG] httpcore.http11: receive_response_body.started request=<Request [b'POST']>
+2025-10-11 19:00:26,654 [DEBUG] httpcore.http11: receive_response_body.complete
+2025-10-11 19:00:26,654 [DEBUG] httpcore.http11: response_closed.started
+2025-10-11 19:00:26,654 [DEBUG] httpcore.http11: response_closed.complete
+2025-10-11 19:00:26,655 [DEBUG] httpcore.connection: close.started
+2025-10-11 19:00:26,655 [DEBUG] httpcore.connection: close.complete
+2025-10-11 19:01:33,339 [INFO] RAGPipeline: llm_status: success
+2025-10-11 19:01:33,339 [INFO] RAGPipeline: route: RAG
+2025-10-11 19:01:33,339 [INFO] RAGPipeline: llm_response_len: 199
+2025-10-11 19:01:33,339 [INFO] RAGPipeline: intent: news
+2025-10-11 19:01:33,340 [INFO] RAGPipeline: timestamp: 2025-10-11T19:01:33.340805
+2025-10-11 19:01:33,340 [INFO] RAGPipeline: summary: {'timestamp': '11/10/2025 19:01:33', 'session_id': '1519be6a-bdc7-46cf-b500-bc5e2d67c9a0', 'route': 'rag', 'api_type': None, 'llm_status': 'retriever_success', 'retrieved_docs': 3, 'prompt_len': 5116, 'response_len': 199, 'tickers': ['TIN'], 'time_filter': (1760115600, 1760201999), 'latency_ms': 66738.37}
+2025-10-11 19:01:33,341 [INFO] RAGPipeline: [SUMMARY] route=rag, llm=retriever_success, docs=3, latency=66738.37ms
+2025-10-11 19:12:34,839 [DEBUG] urllib3.connectionpool: Starting new HTTPS connection (1): trading.vietcap.com.vn:443
+2025-10-11 19:12:35,449 [DEBUG] urllib3.connectionpool: https://trading.vietcap.com.vn:443 "POST /api/price/symbols/getList HTTP/1.1" 200 None
+2025-10-11 19:12:35,460 [INFO] RAGPipeline: router: API
+2025-10-11 19:12:35,460 [INFO] RAGPipeline: intent: stock
+2025-10-11 19:12:35,461 [INFO] RAGPipeline: summary: {'timestamp': '11/10/2025 19:12:35', 'session_id': '8f046372-603d-49dc-bdde-0a38c57d4e60', 'route': 'API', 'api_type': 'stock', 'llm_status': 'api_response', 'retrieved_docs': 0, 'prompt_len': 0, 'response_len': 193, 'tickers': ['VCB'], 'time_filter': (1760115600, 1760201999), 'latency_ms': 870.26}
+2025-10-11 19:12:35,461 [INFO] RAGPipeline: [SUMMARY] route=API, llm=api_response, docs=0, latency=870.26ms

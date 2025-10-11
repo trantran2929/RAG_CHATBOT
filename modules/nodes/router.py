@@ -26,15 +26,18 @@ def route_intent(state: GlobalState) -> GlobalState:
         "vn-index", "vn30", "hnx", "upcom"
     ]
 
-    if any(kw in user_query for kw in ["tin tức", "tin mới", "cập nhật", "bản tin", "thời sự"]):
+    news_keywords = ["tin tức", "tin mới", "cập nhật", "bản tin", "thời sự"]
+    if any(kw in user_query for kw in news_keywords):
         if any(k in user_query for k in stock_keywords):
             state.route_to = "hybrid"
-            state.api_type = "hybrid_market"
+            state.intent = "news"
+            state.api_type = "market_news"
             state.api_response = format_market_summary()
             state.add_debug("route", "hybrid_news_stock")
         else:
             state.route_to = "rag"
-            state.api_type = "new general"
+            state.intent = "news"
+            state.api_type = None
             state.api_response = None
             state.add_debug("route", "rag_new_general")
         return state
@@ -49,20 +52,25 @@ def route_intent(state: GlobalState) -> GlobalState:
         if symbol:
             data = get_stock_quote(symbol)
             state.api_type = "stock"
+            state.intent = "stock"
             if "error" not in data:
                 state.api_response = format_stock_info(symbol)
             else:
-                state.api_response = f"⚠️ Không thể lấy dữ liệu cho mã {symbol.upper()}."
+                state.api_response = f"Không thể lấy dữ liệu cho mã {symbol.upper()}."
+
+            if any(x in user_query for x in ["tin", "phân tích", "đánh giá", "biến động", "xu hướng"]):
+                state.route_to = "hybrid"
+                state.add_debug("route", "hybrid_stock")
+            else:
+                state.route_to = "api"
+                state.add_debug("route", "stock_api")
         else:
             state.api_type = "market"
+            state.intent = "market"
             state.api_response = format_market_summary()
-
-        if any(x in user_query for x in ["tin", "phân tích", "đánh giá"]):
-            state.route_to = "hybrid"
-            state.add_debug("route", "hybrid_stock")
-        else:
             state.route_to = "api"
-            state.add_debug("route", "stock_api")
+            state.add_debug("route", "market_summary")
+        
         return state
 
     weather_keywords = ["thời tiết", "nhiệt độ", "mưa", "nắng"]
@@ -74,6 +82,7 @@ def route_intent(state: GlobalState) -> GlobalState:
 
         state.route_to = "api"
         state.api_type = "weather"
+        state.intent = "weather"
 
         if "error" not in weather:
             state.api_response = (
@@ -89,12 +98,14 @@ def route_intent(state: GlobalState) -> GlobalState:
     if any(kw in user_query for kw in time_keywords):
         state.route_to = "api"
         state.api_type = "time"
+        state.intent = "time"
         state.api_response = f"🕒 Hôm nay là {format_full(get_now())}."
         state.add_debug("route", "time_api")
         return state
 
     state.route_to = "rag"
     state.api_type = None
+    state.intent = "general"
     state.api_response = None
     state.add_debug("route", "rag_default")
     return state

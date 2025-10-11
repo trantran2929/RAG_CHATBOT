@@ -53,6 +53,27 @@ def load_to_vector_db(docs: List[Dict], collection_name: str = None, batch_size:
     # Không loại trùng theo URL — vì mỗi chunk là 1 point riêng biệt
     print(f"[Loader] Nhận {len(docs)} đoạn văn cần upload lên Qdrant...")
 
+    #Lọc bỏ các doc trống nội dung
+    valid_docs = []
+    for doc in docs:
+        content_text = (
+            doc.get("content") or
+            doc.get("summary") or
+            doc.get("title") or
+            ""
+        ).strip()
+        if not content_text:
+            continue
+
+        doc["content"] = content_text
+        valid_docs.append(doc)
+    
+    if not valid_docs:
+        print("[Loader] Tất cả tài liệu đều rỗng, không có gì upload")
+        return 0
+    
+    print(f"[Loader] Sau khi lọc còn {len(valid_docs)} tài liệu hợp lệ.")
+
     corpus = [doc.get("content", "") for doc in docs]
     embedder_services.fit_bm25(corpus)
 

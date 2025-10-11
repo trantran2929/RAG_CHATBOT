@@ -3,25 +3,26 @@ from modules.api.time_api import get_datetime_context
 
 SYSTEM_INSTRUCTION = """
 ***Bạn là trợ lý AI chuyên về tài chính. Hãy thực hiện các nhiệm vụ sau:***
-1. Tóm tắt tin tức chứng khoán (cổ phiếu, chỉ số, ngành nghề) Việt Nam.
+1. Tóm tắt tin tức chứng khoán (cổ phiếu, chỉ số, ngành nghề) Việt Nam. 
 2. Phân tích xu hướng thị trường dựa trên dữ liệu và tin tức Việt Nam.
-3. Cung cấp thông tin mã cổ phiếu ở Việt Nam.
-4. Đưa ra gợi ý đầu tư theo hướng tham khảo, KHÔNG phải lời khuyên tuyệt đối.
+3. Nếu người dùng hỏi về mã cổ phiếu, phải tập trung phân tích đúng mã đó (ví dụ: TCB → Techcombank), không nhầm sang mã khác.
+4. Cung cấp thông tin mã cổ phiếu ở Việt Nam.
+5. Đưa ra gợi ý đầu tư theo hướng tham khảo, KHÔNG phải lời khuyên tuyệt đối.
 """
 CONSTRAINTS = """
 ***Các quy tắc ứng xử:***
 1. Không sử dung ngôn ngữ lập trình, mã code(python, js, html, markdown...), các câu lệnh (if/else,print,...).
 2. Không được thêm tiền tố như `text`, `json`, `yaml`, `tool_code` hoặc bất kỳ định dạng nào khác.
-3. Trả lời trực tiếp, đúng vào câu hỏi.
-4. KHÔNG thêm disclaimer kiểu "Tôi không phải chuyên gia tài chính...", heading hoặc nội dung ngoài yêu cầu.
-5. Dùng thông tin từ Retrieved context nếu có, nhưng không lặp lại nguyên văn.
+3. KHÔNG thêm disclaimer kiểu "Tôi không phải chuyên gia tài chính...", heading hoặc nội dung ngoài yêu cầu.
+4. Dùng thông tin từ Retrieved context nếu có, nhưng không lặp lại nguyên văn.
 """
 
 def build_prompt(state: GlobalState, max_context_chars: int = 1800) -> GlobalState:
 
-    if getattr(state, "api_response", None):
-        state.add_debug("prompt_builder", "Skipped")
+    if getattr(state, "route_to", "") not in ["rag", "hybrid"]:
         state.prompt = ""
+        state.add_debug("prompt_builder", "Skipped")
+        state.llm_status = "prompt_skipped"
         return state
 
     lang = state.lang or "vi"
@@ -67,6 +68,8 @@ def build_prompt(state: GlobalState, max_context_chars: int = 1800) -> GlobalSta
         if history_lines:
             prompt_parts.append("## Conversation History:\n" + "\n".join(history_lines))
 
+    if getattr(state, "api_response", None) and getattr(state, "route_to", "") not in ["rag", "hybrid"]:
+        prompt_parts.append("## Stock Data:\n" + state.api_response.strip() + "\n")
             
     # Retrieved Context
     retrieved_docs = getattr(state, "retrieved_docs", []) or []
@@ -104,14 +107,23 @@ def build_prompt(state: GlobalState, max_context_chars: int = 1800) -> GlobalSta
         "rag": "Phân tích câu hỏi tổng quát bằng cách dùng Context."
     }
     intent_task = intent_instructions.get(state.intent or "rag", "Trả lời câu hỏi tài chính tổng quát.")
-    prompt_parts.append(f"### Task Type:\nIntent: {state.intent}\nMô tả: {intent_task}")
+    if state.intent == "news":
+        prompt_parts.append("""
+            ## Output Guidelines:
+            - Hãy tóm tắt 3–5 câu tin tài chính hoặc chứng khoán Việt Nam gần nhất từ Context.
+            - Nếu có nhiều tin, ưu tiên tin về các công ty lớn (VIX, SSI, HPG, VCB,...).
+            - Nếu không có tin nổi bật, hãy nói rõ “Không tìm thấy tin tài chính đáng chú ý hôm nay”.
+            - Không viết placeholder, không lặp lại tiêu đề, không thêm lời khuyên đầu tư.
+            - Chỉ dùng dữ liệu có trong Context.
+                """)
+    prompt_parts.append(f"## Task Type:\nIntent: {state.intent}\nMô tả: {intent_task}")
 
     # User query
     user_input = (state.user_query or state.processed_query or "").strip()
     prompt_parts.append(f"\n## Task Input:\n**User:** {user_input}")
 
     if lang == "vi":
-        lang_instruction = "Không được sử dụng ngôn ngữ khác ngoài tiếng Việt."
+        lang_instruction = "- Luôn trả lời bằng TIẾNG VIỆT nếu có từ ngữ chuyên ngành (VNINDEX, VN30,..) thì giữ nguyên dạng gốc"
     else:
         lang_instruction = f"- Ưu tiên trả lời bằng ngôn ngữ '{lang}'."
 
@@ -126,10 +138,10 @@ def build_prompt(state: GlobalState, max_context_chars: int = 1800) -> GlobalSta
         print(state.prompt[:600], flush=True)
 
     # Debug
-    state.add_debug("prompt_length", len(state.prompt))
-    state.add_debug("prompt_preview", state.prompt[:400])
-    state.add_debug("history_count", len(history_msgs))
-    state.add_debug("context_docs_count", len(retrieved_docs))
-    state.add_debug("prompt_bulder_status", "RAG prompt built")
+    # state.add_debug("prompt_length", len(state.prompt))
+    # state.add_debug("prompt_preview", state.prompt[:400])
+    # state.add_debug("history_count", len(history_msgs))
+    # state.add_debug("context_docs_count", len(retrieved_docs))
+    # state.add_debug("prompt_bulder_status", "RAG prompt built")
 
     return state

@@ -1,8 +1,9 @@
 from modules.core.state import GlobalState
 from datetime import datetime, timedelta
 import pytz
+from collections import defaultdict
 
-def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int = 48) -> GlobalState:
+def retrieve_documents(state: GlobalState, max_chars: int = 12000, max_hours: int = 48) -> GlobalState:
     """
     Lấy documents (payload) từ Qdrant search_results và tổng hợp lại context cho LLM.
     - Nếu query là API (state.api_response != None) thì bỏ qua
@@ -10,7 +11,7 @@ def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int
     - Giới hạn context theo max_chars và max_hours.
     """
 
-    if getattr(state,"api_response",None):
+    if getattr(state, "route_to", "") not in ["rag", "hybrid"]:
         state.retrieved_docs = []
         state.context = ""
         state.add_debug("retriever", "Skipped")
@@ -24,64 +25,55 @@ def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int
         state.llm_status = "retriever_no_docs"
         return state
 
-    docs = []
-    context_parts = []
     vn_tz = pytz.timezone("Asia/Ho_Chi_Minh")
     now = datetime.now(vn_tz)
     min_ts = int((now - timedelta(hours=max_hours)).timestamp())
 
+    # Gom chunk theo url hoặc title
+    grouped = defaultdict(list)
     for hit in state.search_results:
-        payload = hit.get("payload", {}) or {}
-        score = float(hit.get("score", 0.0)) if hit.get("score") is not None else 0.0
+        url = (hit.get("url") or "").strip()
+        title = (hit.get("title") or "").strip()
+        key = url if url else title
+        grouped[key].append(hit)
+    
+    merged_docs = []
+    for key, group in grouped.items():
+        best = max(group, key=lambda x: x.get("score",0.0))
+        merged_content = " ".join(
+            (d.get("content") or d.get("summary") or d.get("title") or "")
+            for d in group
+            if d.get("content")
+        ).strip()
 
-        content = (payload.get("content") or payload.get("summary") or payload.get("text") or "").strip()
-        if not content or len(content) < 20:
-            continue
-
-        title = payload.get("title", "")
-        url = payload.get("url", "") or payload.get("link", "") or ""
-        time = payload.get("time", "")
-        time_ts = payload.get("time_ts",None)
+        time_ts = best.get("time_ts")
 
         if time_ts and isinstance(time_ts, (int, float)) and time_ts < min_ts:
             continue
 
-        if content:
-            docs.append({
-                "id": hit.get("id"),
-                "score": score,
-                "title": title,
-                "time": time,
-                "time_ts": time_ts,
-                "url": url,
-                "content": content
-            })
-            context_parts.append(
-                f"[{title} | {time}]\n{content}\n(Source: {url})"
-            )
-
-        state.add_debug(f"retriever_hit_{hit.get('id')}", {
-            "score": round(score, 4),
-            "title": title,
-            "time": time,
-            "time_ts": time_ts,
-            "url": url,
-            "content_len": len(content)
+        merged_docs.append({
+            "id": best.get("id"),
+            "score": best.get("score", 0.0),
+            "title": best.get("title", ""),
+            "time": best.get("time", ""),
+            "time_ts": best.get("time_ts"),
+            "url": best.get("url", ""),
+            "content": merged_content[:2000]
         })
 
+    merged_docs.sort(key=lambda x: (x["time_ts"] or 0, -x["score"]))
+
+    context_parts = []
+    total_len = 0
+    for d in merged_docs:
+        part = f"[{d['title']} | {d['time']}] | score={round(d['score'],3)}]\n{d['content']}\n(Source: {d['url']})"
+        if total_len + len(part) > max_chars:
+            break
+        context_parts.append(part)
+        total_len += len(part)
+
     context_text = "\n\n".join(context_parts)
-
-    if len(context_text) > max_chars:
-        truncated = []
-        total = 0
-        for part in context_parts:
-            if total + len(part) > max_chars:
-                break
-            truncated.append(part)
-            total += len(part)
-        context_text = "\n\n".join(truncated) + "\n...\n[Context truncated]"
-
-    state.retrieved_docs = docs
+    state.retrieved_docs = merged_docs
     state.context = context_text.strip()
 
     if getattr(state,"debug", False):
@@ -89,24 +81,21 @@ def retrieve_documents(state: GlobalState, max_chars: int = 1500, max_hours: int
         for d in state.retrieved_docs:
             print({
                 "id": d.get("id"),
-                "score": d.get("score"),
+                "score": round(d.get("score", 0.0), 3),
                 "title": d.get("title"),
                 "time": d.get("time"),
                 "time_ts": d.get("time_ts"),
                 "url": d.get("url"),
-                "content_preview": d.get("content")[:200]  
+                "content_preview": d.get("content")[:800]  
             }, flush=True)
 
         print("*** FINAL CONTEXT PASSED TO PROMPT ***", flush=True)
-        print(state.context[:500], flush=True)  
+        print(state.context[:800], flush=True)  
+        print(f"\n[Retriever] Retrieved {len(state.retrieved_docs)} docs", flush=True)
 
-    state.add_debug("retriever_docs", len(docs))
-    state.add_debug("retriever_context_len", len(state.context))
-    state.add_debug("retriever_titles", [d["title"] for d in docs])
-
-    if getattr(state, "debug", False):
-        print(f"[Retriever] Retrieved {len(docs)} docs", flush=True)
-        for d in docs:
-            print(f"  - {d['title']} | {d['time']} | score={d['score']:.3f}", flush=True)
+    # state.add_debug("retriever_docs", len(merged_docs))
+    # state.add_debug("retriever_context_len", len(state.context))
+    # state.add_debug("retriever_titles", [d["title"] for d in merged_docs])
+    state.llm_status = "retriever_success"
 
     return state

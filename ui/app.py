@@ -71,7 +71,6 @@ if cached:
         st.warning(f"Không thể load cache: {str(e)}")
         st.session_state.chat_history = []
 
-# ========== HELPERS ==========
 def render_sources(sources):
     """Hiển thị danh sách nguồn tham khảo."""
     if not sources:
@@ -103,8 +102,7 @@ def display_history():
             st.markdown(content)
             if role == "assistant":
                 render_sources(msg.get("sources"))
-
-# ========== MAIN UI ==========
+                
 display_history()
 
 if user_input := st.chat_input("💬 Nhập tin nhắn của bạn..."):

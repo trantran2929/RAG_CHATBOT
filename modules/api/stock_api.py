@@ -239,10 +239,10 @@ def format_stock_info(symbol: str) -> str:
     if data.get("fallback"):
         note = f" _(giá đóng cửa của {data.get('fallback_date', 'phiên gần nhất')})_"
     return (
-        f"📊 **{data['symbol']}** — Giá hiện tại: {data['price']:,} VNĐ\n"
-        f"• Mở cửa: {data['open']:,} | Cao nhất: {data['high']:,} | Thấp nhất: {data['low']:,}\n"
-        f"• Thay đổi: {data['change']:+.2f} ({data['percent_change']:+.2f}%)\n"
-        f"• Khối lượng: {data['volume']:,}\n"
+        f"📊 **{data['symbol']}** — Giá hiện tại: {data['price']:,} VNĐ  \n"
+        f"• Mở cửa: {data['open']:,} | Cao nhất: {data['high']:,} | Thấp nhất: {data['low']:,}  \n"
+        f"• Thay đổi: {data['change']:+.2f} ({data['percent_change']:+.2f}%)  \n"
+        f"• Khối lượng: {data['volume']:,}  \n"
         f"🕒 Cập nhật: {data['timestamp']}{note}"
     )
 
@@ -253,24 +253,33 @@ def format_top_stocks(direction="up", limit=5) -> str:
     if not tops:
         return f"⚠️ Không có dữ liệu {title.lower()}."
     lines = [f"{arrow} {t['symbol']} ({t['pct_change']}%)" for t in tops]
-    return f"📊 **{title}**\n" + "\n".join(lines)
+    return f"📊 **{title}**  \n" + "  \n".join(lines)
 
 @TTLCache(ttl_seconds=300)
-def format_market_summary() -> str:
+def format_market_summary(indices: list[str] = None) -> str:
     try:
-        index_data = get_index_detail("VNINDEX")
-        if "error" in index_data:
-            return "⚠️ Không thể lấy dữ liệu thị trường."
-        trend_emoji = "📈" if index_data["change"] > 0 else "📉" if index_data["change"] < 0 else "⏸️"
-        vnindex_text = (
-            f"{trend_emoji} **VNINDEX**: {index_data['price']:,} điểm "
-            f"({index_data['change']:+.2f}, {index_data['percent_change']:+.2f}%)"
-        )
+        if indices is None:
+            indices = ["VNINDEX", "VN30", "HNX", "UPCOM"]
+        
+        summaries = []
+        for idx in indices:
+            data = get_index_detail(idx)
+            if "error" in data:
+                continue
+            emoji = "📈" if data["change"] > 0 else "📉" if data["change"] < 0 else "⏸️"
+            summaries.append(
+                f"{emoji} **{data['ticker']}**: {data['price']:,} điểm "
+                f"({data['change']:+.2f}, {data['percent_change']:+.2f}%)"
+            )
+
+            if not summaries:
+                return "⚠️ Không thể lấy dữ liệu thị trường."
+            
         return (
-            f"📊 **TỔNG QUAN THỊ TRƯỜNG VIỆT NAM**\n"
-            f"{vnindex_text}\n\n"
-            f"{format_top_stocks('up', 3)}\n\n"
-            f"{format_top_stocks('down', 3)}\n"
+            f"📊 **TỔNG QUAN THỊ TRƯỜNG VIỆT NAM**  \n" +
+            "  \n".join(summaries) + "  \n\n" +
+            f"{format_top_stocks('up', 3)}  \n\n" +
+            f"{format_top_stocks('down', 3)}  \n" +
             f"🕒 Cập nhật: {get_time_vn()}"
         )
     except Exception as e:

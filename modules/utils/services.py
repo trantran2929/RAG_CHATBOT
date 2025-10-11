@@ -1,7 +1,8 @@
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 import redis
-from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, pipeline
+from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM
+from transformers.pipelines import pipeline
 import torch
 from dotenv import load_dotenv
 from huggingface_hub import login
@@ -77,7 +78,7 @@ class LLMServices:
             tokenizer=self.tokenizer,
             max_new_tokens=256,
             do_sample=True,
-            temperature=0.7,
+            temperature=0.6,
             return_full_text=True,
             repetition_penalty=1.2
         )
@@ -95,25 +96,53 @@ class EmbedderServices:
     def __init__(
             self, 
             dense_model_name="sentence-transformers/all-MiniLM-L6-v2",
-            device=None
+            device=None,
+            auto_fit=True,
+            collection_name="cafef_articles",
+            max_docs=5000
         ):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         print("EmbedderServices device:", self.device)
-        # Dense encoder
         self.dense_tokenizer = AutoTokenizer.from_pretrained(dense_model_name)
         self.dense_model = AutoModel.from_pretrained(dense_model_name).to(self.device)
 
-        #BM25
         self.corpus_tokens = None
         self.bm25 = None
         self.vocab= {}
 
+        if auto_fit:
+            self.auto_fit_bm25(collection_name, max_docs)
+
     def fit_bm25(self,corpus):
         self.corpus_tokens = [doc.split(" ")  for doc in corpus]
         self.bm25 = BM25Okapi(self.corpus_tokens)
-        # Tạo vocab mapping
         unique_tokens = sorted(set(token for doc in self.corpus_tokens for token in doc))
         self.vocab = {token: idx for idx, token in enumerate(unique_tokens)}
+
+    def auto_fit_bm25(self, collection_name, max_docs=5000):
+        """
+        Tự động fit BM25 từ Qdrant nếu chưa được fit
+        """
+        try:
+            docs, _ = qdrant_services.client.scroll(
+                collection_name=collection_name,
+                limit=max_docs,
+                with_payload=True
+            )
+            corpus = []
+            for d in docs:
+                payload = d.payload or {}
+                text = payload.get("content") or payload.get("summary")
+                if text and len(text.split()) > 5:
+                    corpus.append(text)
+            
+            if corpus:
+                self.fit_bm25(corpus)
+            else:
+                print("[BM25] Không tìm thấy dữ liệu để fit BM25")
+        
+        except Exception as e:
+            print("[BM25] Lỗi auto_fit BM25: {e}")
 
     def encode_dense(self, texts):
         if isinstance(texts, str):
@@ -126,7 +155,7 @@ class EmbedderServices:
         return outputs.last_hidden_state.mean(dim=1).cpu().numpy().tolist()
     
     def encode_sparse(self, texts):
-        if not self.bm25:
+        if self.bm25 is None or not hasattr(self, "vocab") or len(self.vocab) == 0:
             raise ValueError("BM25 chưa được fit")
 
         if isinstance(texts, str):
@@ -147,24 +176,4 @@ class EmbedderServices:
             results.append({"indices": indices, "values": values})
         return results
     
-    # def encode_sparse(self, text: str):
-    #     if not self.bm25:
-    #         raise ValueError("BM25 chưa được fit")
-
-    #     tokens = text.split(" ")
-    #     indices = []
-    #     values = []
-    #     for token in tokens:
-    #         if token in self.vocab:
-    #             idx = self.vocab[token]
-    #             val = self.bm25.idf.get(token, 0.0)
-    #             if val > 0:
-    #                 indices.append(idx)
-    #                 values.append(val)
-
-    #     return {"indices": indices, "values": values}
-
-
-
-
-embedder_services = EmbedderServices()
+embedder_services = EmbedderServices(auto_fit=True)

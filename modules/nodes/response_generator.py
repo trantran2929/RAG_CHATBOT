@@ -11,7 +11,7 @@ def response_node(state: GlobalState, max_history: int = 50) -> GlobalState:
     - Ngược lại gọi LLM sinh phản hồi từ prompt
     - Chuẩn hóa output, lưu vào conversation_history
     """
-    if getattr(state, "api_response", None):
+    if getattr(state, "route_to", "") not in ["rag", "hybrid"]:
         state.mark_api_response(
             api_type=state.api_type or "generic_api",
             result=state.api_response,
@@ -54,9 +54,9 @@ def response_node(state: GlobalState, max_history: int = 50) -> GlobalState:
             state.prompt,
             max_new_tokens=512,
             do_sample=True,
-            temperature=0.7,
+            temperature=0.6,
             repetition_penalty=1.2,
-            return_full_text=False,
+            return_full_text=False
         )
 
         if isinstance(outputs, str):
@@ -83,8 +83,24 @@ def response_node(state: GlobalState, max_history: int = 50) -> GlobalState:
             if stop_word in assistant_msg:
                 assistant_msg = assistant_msg.split(stop_word)[-1].strip()
 
-        if not assistant_msg:
-            assistant_msg = "Xin lỗi, tôi không thể tạo phản hồi."
+        if not assistant_msg or len(assistant_msg.split()) < 10:
+            # Nếu LLM trả rỗng hoặc quá ngắn -> fallback tự động tóm tắt context
+            context_docs = getattr(state, "retrieved_docs", [])
+            if context_docs:
+                fallback_summary = []
+                for doc in context_docs[:3]:  # chỉ lấy top 3 tin
+                    title = doc.get("title", "")
+                    time = doc.get("time", "")
+                    snippet = (doc.get("content_preview") or doc.get("summary") or doc.get("content") or "")
+                    snippet = snippet[:150].strip()
+                    fallback_summary.append(f"- {title} ({time}): {snippet}...")
+                assistant_msg = (
+                    "Tóm tắt nhanh các tin nổi bật hôm nay:\n" + "\n".join(fallback_summary)
+                    + "\n\nThị trường đang phản ứng với các yếu tố trên, nhà đầu tư tiếp tục theo dõi xu hướng nhóm ngân hàng và chứng khoán."
+                )
+            else:
+                assistant_msg = "Không có dữ liệu tin tức nào để tóm tắt hôm nay."
+
 
     except Exception as e:
         add_debug_info(state, "llm_status", "error")
@@ -111,10 +127,10 @@ def response_node(state: GlobalState, max_history: int = 50) -> GlobalState:
     state.conversation_history = state.conversation_history[-max_history:]
 
     state.final_answer = state.response = assistant_msg
-    add_debug_info(state, "llm_status", "success")
-    add_debug_info(state, "route", "RAG")
-    add_debug_info(state, "llm_response_len", len(assistant_msg))
-    add_debug_info(state, "intent", state.intent)
-    add_debug_info(state, "timestamp", datetime.now().isoformat())
+    # add_debug_info(state, "llm_status", "success")
+    # add_debug_info(state, "route", "RAG")
+    # add_debug_info(state, "llm_response_len", len(assistant_msg))
+    # add_debug_info(state, "intent", state.intent)
+    # add_debug_info(state, "timestamp", datetime.now().isoformat())
 
     return state
