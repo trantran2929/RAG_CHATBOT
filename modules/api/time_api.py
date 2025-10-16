@@ -13,7 +13,7 @@ def format_full(dt: datetime) -> str:
     if dt is None:
         dt = get_now()
     weekday = WEEKDAYS_VN[dt.weekday()]
-    return f"{weekday}, Ngày {dt.day:02d} tháng {dt.month:02d} năm {dt.year}, {dt.strftime('%H:%M:%S')}"
+    return f"{weekday}, Ngày {dt.day:02d} tháng {dt.month:02d} năm {dt.year}"
 def format_date(dt: datetime)->str:
     return f"Ngày {dt.day:02d} tháng {dt.month:02d} năm {dt.year}"
 def format_weekday(dt: datetime) -> str:

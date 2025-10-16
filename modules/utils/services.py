@@ -7,8 +7,10 @@ import torch
 from dotenv import load_dotenv
 from huggingface_hub import login
 import os
-import numpy as np
 from rank_bm25 import BM25Okapi
+from sentence_transformers import CrossEncoder
+import requests
+from langchain.chat_models import init_chat_model
 
 # Load biến môi trường
 load_dotenv()
@@ -59,39 +61,74 @@ class RedisCacheServices:
 
 redis_services = RedisCacheServices()
 
+# class LLMServices:
+#     def __init__(self, model_id="google/gemma-3-1b-it"):
+#         self.model = AutoModelForCausalLM.from_pretrained(
+#             model_id,
+#             device_map="auto",
+#             torch_dtype=torch.float16,
+#             trust_remote_code=True,
+#             # low_cpu_mem_usage=True,
+#             offload_folder="offload",
+#             offload_buffers=True
+#         )
+#         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
+#         self.generator = pipeline(
+#             "text-generation",
+#             model=self.model,
+#             tokenizer=self.tokenizer,
+#             max_new_tokens=256,
+#             do_sample=True,
+#             temperature=0.6,
+#             return_full_text=True,
+#             repetition_penalty=1.2
+#         )
+
+#     def generate(self, prompt: str):
+#         return self.generator(prompt)[0]["generated_text"]
+
+#     # try:
+#     #     llm_services = LLMServices()
+#     # except Exception as e:
+#     #     print("Skip LLMServices init:", e)
+#     #     llm_services = None
+# llm_services = LLMServices()
 
 class LLMServices:
-    def __init__(self, model_id="google/gemma-3-1b-it"):
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_id,
-            device_map="auto",
-            torch_dtype=torch.float16,
-            trust_remote_code=True,
-            # low_cpu_mem_usage=True,
-            offload_folder="offload",
-            offload_buffers=True
-        )
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
-        self.generator = pipeline(
-            "text-generation",
-            model=self.model,
-            tokenizer=self.tokenizer,
-            max_new_tokens=256,
-            do_sample=True,
-            temperature=0.6,
-            return_full_text=True,
-            repetition_penalty=1.2
+    def __init__(self,
+                 base_url="https://nonomissible-winfred-doggedly.ngrok-free.dev/v1",
+                 model_name="qwen3-30b-thinking"):
+        self.base_url = base_url.rstrip("/")
+        self.model_name = model_name
+        self.api_key = os.getenv("LLM_API_KEY", "dummy") 
+
+        self.model = init_chat_model(
+            model=self.model_name,
+            model_provider="openai",       
+            base_url=self.base_url,
+            api_key=self.api_key,
         )
 
+    def generate(self, prompt: str, temperature: float = 0.7, max_tokens: int = 2048):
+        """
+        Gọi model để sinh phản hồi (chat completion).
+        """
+        try:
+            res = self.model.invoke(
+                [
+                    {"role": "system", "content": "Bạn là trợ lý AI tài chính thông minh, trả lời bằng tiếng Việt."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            # Kết quả LangChain có thể là string hoặc object
+            return res if isinstance(res, str) else getattr(res, "content", str(res))
+        except Exception as e:
+            print(f"[LLM] Lỗi khi gọi model qua LangChain: {e}")
+            return f"[Lỗi LLM từ server] {e}"
 
-# try:
-#     llm_services = LLMServices()
-# except Exception as e:
-#     print("Skip LLMServices init:", e)
-#     llm_services = None
 llm_services = LLMServices()
-
-
 class EmbedderServices:
     def __init__(
             self, 
@@ -140,7 +177,7 @@ class EmbedderServices:
                 self.fit_bm25(corpus)
             else:
                 print("[BM25] Không tìm thấy dữ liệu để fit BM25")
-        
+            
         except Exception as e:
             print("[BM25] Lỗi auto_fit BM25: {e}")
 
@@ -153,11 +190,11 @@ class EmbedderServices:
         with torch.no_grad():
             outputs = self.dense_model(**inputs)
         return outputs.last_hidden_state.mean(dim=1).cpu().numpy().tolist()
-    
+        
     def encode_sparse(self, texts):
         if self.bm25 is None or not hasattr(self, "vocab") or len(self.vocab) == 0:
             raise ValueError("BM25 chưa được fit")
-
+        
         if isinstance(texts, str):
             texts = [texts]
 
@@ -175,5 +212,39 @@ class EmbedderServices:
             values = list(index_map.values())
             results.append({"indices": indices, "values": values})
         return results
-    
+        
 embedder_services = EmbedderServices(auto_fit=True)
+
+class RerankerServices:
+    def __init__(self, model_name="cross-encoder/ms-marco-MiniLM-L-6-v2", device=None):
+        self.model_name = model_name
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        print("RerankerServices device:", self.device)
+        self.model = CrossEncoder(model_name, device=self.device)
+
+    def rerank(self, query: str, docs: list):
+        """
+            Sắp xếp lại danh sách tài liệu theo độ liên quan ngữ nghĩa (semantic relevance).
+            Args:
+                query: câu hỏi hoặc truy vấn của người dùng
+                docs: list chứa text hoặc dict có key 'content'
+            Returns:
+                list đã rerank theo điểm số giảm dần
+        """
+        if not docs:
+            return []
+            
+        # Nếu input là list[str]
+        if isinstance(docs[0], str):
+            pairs = [(query,d) for d in docs]
+            scores = self.model.predict(pairs)
+            return list(zip(docs, scores))
+        # Nếu input là list[dict]
+        pairs = [(query, d.get("content", "")) for d in docs]
+        scores = self.model.predict(pairs)
+
+        for i, s in enumerate(scores):
+            docs[i]["rerank_score"] = float(s)
+        docs.sort(key=lambda x: x["rerank_score"], reverse=True)
+        return docs
+reranker_services =RerankerServices()

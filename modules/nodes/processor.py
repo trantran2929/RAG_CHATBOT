@@ -86,17 +86,60 @@ class Processor:
             match = get_close_matches(norm_text, self.greetings, n=1, cutoff=0.8)
             return bool(match)
         return False
+    
+    def detect_tickers(self, text: str) -> str:
+        """
+        Tìm mã chứng khoán hoặc chỉ số thị trường trong câu hỏi.
+        Luôn lọc ticker rỗng và chỉ giữ lại mã hợp lệ.
+        """
+        text_upper = text.upper()
+
+        # Tìm chuỗi viết hoa từ 2-6 kí tự
+        potential = re.findall(r"\b[A-Z]{2,6}\b", text_upper)
+        aliases = {"VNI": "VNINDEX", "VN-INDEX": "VNINDEX"}
+
+        # Danh sách loại trừ các từ dễ nhầm là tiếng Việt
+        invalid_tickers = {"TIN", "MUA", "BAN", "SON", "TOI", "CON", "AN", "DEP", "DO", "XANH"}
+
+        clean_list = []
+        for t in potential:
+            t = aliases.get(t, t.strip().upper())
+            if (
+                3 <= len(t) <= 10
+                and t.isalpha()
+                and (t in self.valid_tickers or t in self.market_indices)
+                and t not in invalid_tickers
+            ):
+                clean_list.append(t)
+
+        # Nếu chưa có, thử tìm theo pattern “cổ phiếu XYZ”
+        if not clean_list:
+            match = re.findall(r"(?:cổ phiếu|mã)\s+([A-Z]{2,6})", text_upper)
+            for t in match:
+                t = t.strip().upper()
+                if (
+                    3 <= len(t) <= 10
+                    and (t in self.valid_tickers or t in self.market_indices)
+                    and t not in invalid_tickers
+                ):
+                    clean_list.append(t)
+
+        return sorted(set(clean_list))
+
     def detect_intent(self, query: str) -> str:
         q = query.lower()
-        if any(k in q for k in ["tin", "tin tức", "cập nhập", "thị trường"]):
-            return "rag"
-        if any(k in q for k in self.finance_keywords):
+        tickers = self.detect_tickers(query)
+        if any(k in q for k in ["phân tích", "xu hướng", "thị trường", "nhận định", "biến động"]):
+            return "market"
+        if tickers or any(k in q for k in self.finance_keywords):
             return "stock"
         if any(k in q for k in self.weather_keywords):
             return "weather"
         if any(k in q for k in self.time_keywords):
             return "time"
         return "rag"
+
+
     def detect_time_filter(self,query: str):
         """
         Trả về tuple (start_ts, end_ts) dạng epoch timestamp nếu query có từ khóa thời gian.
@@ -130,32 +173,18 @@ class Processor:
         elif "tuần sau" in q:
             return (int(today_start.timestamp()), int(next_week_end.timestamp()))
         
+        match = re.search(r"ngày\s*(\d{1,2})[/-](\d{1,2})(?:[/-](\d{4}))?", q)
+        if match:
+            day, month, year = int(match.group(1)), int(match.group(2)), match.group(3)
+            year = int(year) if year else now.year
+            try:
+                dt_start = vn_tz.localize(datetime(year, month, day, 0, 0, 0))
+                dt_end = vn_tz.localize(datetime(year, month, day, 23, 59, 59))
+                return (int(dt_start.timestamp()), int(dt_end.timestamp()))
+            except Exception:
+                pass
+
         return None
-    
-    def detect_tickers(self, text: str) -> str:
-        """
-        Tìm mã chứng khoán hoặc chỉ số thị trường trong câu hỏi
-        Luôn lọc ticker rỗng và chỉ giữ lại mã hợp lệ
-        """
-        text_upper = text.upper()
-
-        # Tìm chuỗi viết hoa từ 2-6 kí tự
-        potential = re.findall(r"\b[A-Z]{2,6}\b", text_upper)
-        # Xử lý alias
-        aliases = {"VNI": "VNINDEX", "VN-INDEX": "VNINDEX"}
-        clean_list = []
-        for t in potential:
-            t = aliases.get(t,t.strip().upper())
-            if 3<=len(t)<=10 and (t in self.valid_tickers or t in self.market_indices) and t.isalpha():
-                clean_list.append(t)
-
-        if not clean_list:
-            match = re.findall(r"(?:cổ phiếu|mã)\s+([A-Z]{2,6})", text_upper)
-            for t in match:
-                if t in self.valid_tickers or t in self.market_indices:
-                    clean_list.append(t)
-
-        return sorted(set(clean_list))
 
     # Chuẩn hóa query tổng hợp
     def process_query(self, state, vocab: list = None):

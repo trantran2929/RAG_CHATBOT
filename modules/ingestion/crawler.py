@@ -9,7 +9,7 @@ TIMEZONE_OFFSET = 7 # UTC+7
 
 def normalize_time(time_tag) -> str:
     """Chuẩn hóa thời gian về format dd-mm-YYYY HH:MM:SS (UTC+7)."""
-    now = datetime.utcnow() - timedelta(hours=TIMEZONE_OFFSET)
+    now = datetime.utcnow() + timedelta(hours=TIMEZONE_OFFSET)
     if not time_tag:
         return now.strftime("%d/%m/%Y, %H:%M:%S")
 

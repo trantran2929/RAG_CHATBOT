@@ -1,4 +1,4 @@
-from modules.utils.services import qdrant_services, embedder_services
+from rag_note.modules.utils.services import qdrant_services, embedder_services
 from qdrant_client import models
 import uuid
 

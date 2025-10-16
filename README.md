@@ -24,7 +24,7 @@ rag_project/ <br>
 │   │   ├── retriever.py      <br>
 │   │   ├── prompt_builder.py      <br>
 │   │   ├── response_generator.py       <br>
-│   │   ├── response.py       <br>
+│   │   ├── router.py       <br>
 │   │     <br>
 │   ├── ingestion/              # crawl và xử lý dữ liệu   <br>
 │   │   ├── Dockerfile        <br>
@@ -34,10 +34,11 @@ rag_project/ <br>
 │   │   └── scheduler.py        # optional: chạy loop/celery/cron     <br>
 │   │     <br>
 │   └── utils/      <br>
+│       ├── __init__.py          <br>
 │       ├── debug.py          <br>
 │       ├── logger.py         <br>
 |       ├── qdrant_ultils.py  <br>
-│       └── services.py       <br>
+│       └── service.py       <br>
 │         <br>
 └── data/      <br>
     └── documents.json   <br>

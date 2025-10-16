@@ -19,7 +19,7 @@ def clean_text(text: str) -> str:
     return text
 
 
-def chunk_text(text: str, max_words: int = 200, overlap: float = 0.2) -> List[str]:
+def chunk_text(text: str, max_words: int = 200, overlap: float = 0.0001) -> List[str]:
     """
     chia nhỏ văn bản thành các chunk bằng sliding window.
     max_words: số từ tối đa mỗi chunk
@@ -34,7 +34,9 @@ def chunk_text(text: str, max_words: int = 200, overlap: float = 0.2) -> List[st
     chunks = []
     for i in range(0, len(words), step):
         chunk = words[i:i + max_words]
-        chunks.append(" ".join(chunk))
+        chunk_text = " ".join(chunk).strip()
+        if chunk_text and chunk_text not in chunks:
+            chunks.append(chunk_text)
         if i + max_words >= len(words):
             break
     return chunks
@@ -51,6 +53,8 @@ def preprocess_articles(articles: List[Dict], max_words: int = 200) -> List[Dict
         title = art.get("title", "").strip()
         content = art.get("content", "").strip()
         cleaned = clean_text(content)
+        if not cleaned and art.get("summary"):
+            cleaned = clean_text(art["summary"])
         if not cleaned:
             continue
         

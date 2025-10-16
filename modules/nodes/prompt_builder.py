@@ -2,146 +2,103 @@ from modules.core.state import GlobalState
 from modules.api.time_api import get_datetime_context
 
 SYSTEM_INSTRUCTION = """
-***Bạn là trợ lý AI chuyên về tài chính. Hãy thực hiện các nhiệm vụ sau:***
-1. Tóm tắt tin tức chứng khoán (cổ phiếu, chỉ số, ngành nghề) Việt Nam. 
-2. Phân tích xu hướng thị trường dựa trên dữ liệu và tin tức Việt Nam.
-3. Nếu người dùng hỏi về mã cổ phiếu, phải tập trung phân tích đúng mã đó (ví dụ: TCB → Techcombank), không nhầm sang mã khác.
-4. Cung cấp thông tin mã cổ phiếu ở Việt Nam.
-5. Đưa ra gợi ý đầu tư theo hướng tham khảo, KHÔNG phải lời khuyên tuyệt đối.
+Bạn là **trợ lý AI tài chính Việt Nam**, chuyên phân tích xu hướng thị trường, cổ phiếu và tin tức.
+1. Khi intent = 'market' thì KẾT HỢP dữ liệu API (giá cổ phiếu, thị trường) với tin tức (Context).
+2. Khi intent = 'stock' thì Trình bày thông tin giá cổ phiếu ngắn gọn.
+3. KHÔNG khuyến nghị đầu tư tuyệt đối.
 """
+
 CONSTRAINTS = """
-***Các quy tắc ứng xử:***
-1. Không sử dung ngôn ngữ lập trình, mã code(python, js, html, markdown...), các câu lệnh (if/else,print,...).
-2. Không được thêm tiền tố như `text`, `json`, `yaml`, `tool_code` hoặc bất kỳ định dạng nào khác.
-3. KHÔNG thêm disclaimer kiểu "Tôi không phải chuyên gia tài chính...", heading hoặc nội dung ngoài yêu cầu.
-4. Dùng thông tin từ Retrieved context nếu có, nhưng không lặp lại nguyên văn.
+- Luôn trả lời bằng TIẾNG VIỆT, ngắn gọn, tự nhiên.
+- KHÔNG dùng mã code, KHÔNG in cấu trúc JSON.
+- KHÔNG nói “Tôi không phải chuyên gia tài chính”.
+- Giữ nguyên các ký hiệu như VNINDEX, VCB, VN30,...
 """
 
-def build_prompt(state: GlobalState, max_context_chars: int = 1800) -> GlobalState:
+INTENT_TASKS = {
+    "market": "Phân tích xu hướng cổ phiếu hoặc thị trường bằng cách kết hợp dữ liệu API và tin tức gần nhất.",
+    "stock": "Cung cấp thông tin giá cổ phiếu hiện tại hoặc lịch sử.",
+    "weather": "Cung cấp thông tin thời tiết tại địa điểm được hỏi.",
+    "time": "Cung cấp thông tin thời gian hiện tại hoặc mốc thời gian cụ thể.",
+    "rag": "Phân tích tổng hợp dựa trên ngữ cảnh tin tức hoặc dữ liệu trong vector DB.",
+    "greeting": "Phản hồi chào hỏi hoặc giới thiệu khả năng trợ lý tài chính."
+}
 
+
+def build_prompt(state: GlobalState, max_context_chars: int = 5000) -> GlobalState:
+    """
+    Sinh prompt động cho chatbot đa-intent (tài chính, thời tiết, thời gian, tin tức, v.v.)
+    """
     if getattr(state, "route_to", "") not in ["rag", "hybrid"]:
         state.prompt = ""
-        state.add_debug("prompt_builder", "Skipped")
+        state.add_debug("prompt_builder", "Skipped (no LLM required)")
         state.llm_status = "prompt_skipped"
         return state
 
-    lang = state.lang or "vi"
+    lang = getattr(state, "lang", "vi")
+    intent = getattr(state, "intent", "rag")
+    task = INTENT_TASKS.get(intent, "Phản hồi thông tin tổng quát.")
+    user_input = (state.user_query or state.processed_query or "").strip()
+
     prompt_parts = []
+    prompt_parts = [
+        f"## Instruction:\n{SYSTEM_INSTRUCTION.strip()}",
+        f"## Constraints:\n{CONSTRAINTS.strip()}",
+        f"## Bối cảnh thời gian:\n{get_datetime_context().strip()}\n"
+    ]
+    context = getattr(state, "context", "").strip()
+    if context:
+        prompt_parts.append("\n## Retrieved Context:\nDưới đây là các tin tức gần nhất, hãy ưu tiên sử dụng chúng để phân tích thị trường:\n")
+        if len(context) > max_context_chars:
+            context = context[:max_context_chars] + "..."
+        prompt_parts.append(context)
+    else:
+        prompt_parts.append("\n## Retrieved Context:\n(Tin tức gần đây chưa khả dụng hoặc không phù hợp.)")
 
-    prompt_parts.append(f"## Instruction:\n {SYSTEM_INSTRUCTION.strip()}\n\n")
-    
-    prompt_parts.append(f"## Constraints:\n {CONSTRAINTS.strip()}\n\n")
+    if getattr(state, "api_response", None):
+        prompt_parts.append("## Dữ liệu API:\n" + state.api_response.strip())
+    # prompt_parts.append("""
+    #     ### Ví dụ minh họa cách kết hợp dữ liệu giá & tin tức:
+    #     **Dữ liệu giá:**
+    #     📊 VCB — Giá hiện tại: 62,500 VNĐ (-0.95%)
 
-    prompt_parts.append("## Current Date/Time Context:\n" + get_datetime_context()+ "\n(Luôn sử dụng thông tin trên khi người dùng hỏi về ngày, giờ, hôm qua, mai, tuần trước/sau.)")
+    #     **Tin tức:**
+    #     VN-Index xuất hiện tín hiệu tạo đỉnh ngắn hạn, nhóm chứng khoán báo lỗ quý 3/2025.
 
-    examples = """
-    ## Examples (chỉ minh họa định dạng hội thoại, KHÔNG lặp lại nội dung ví dụ, chỉ dùng để tham khảo cấu trúc):
+    #     **Trả lời mẫu:**
+    #     Hôm nay cổ phiếu VCB giảm 0.95%, diễn biến cùng xu hướng điều chỉnh chung của thị trường
+    #     khi VN-Index có tín hiệu tạo đỉnh ngắn hạn. Một số thông tin tiêu cực từ nhóm chứng khoán
+    #     gây áp lực chốt lời, khiến dòng tiền trở nên thận trọng. Xu hướng ngắn hạn: giảm nhẹ.
+    #     """)
 
-    **- Example 1:**
-    **User:** Hãy cho tôi thông tin về một mã cổ phiếu.  
-    **Assistant:** Tóm tắt ngắn gọn tin tức liên quan đến mã cổ phiếu đó.
-
-    **- Example 2:**
-    **User:** Thị trường chứng khoán Việt Nam có xu hướng gì nổi bật?  
-    **Assistant:** Phân tích xu hướng dựa trên tin tức và dữ liệu, ngắn gọn, súc tích.
-    """
-    prompt_parts.append(examples.strip())
-
-    # Conversation History
-    history_msgs = (state.conversation_history or [])[-5:]
+    history_msgs = (getattr(state, "conversation_history", []) or [])[-5:]
     if history_msgs:
-        history_lines = []
+        lines = []
         for msg in history_msgs:
             role = msg.get("role", "").capitalize()
-            if role in ["User", "Assistant"]:
-                content = (
-                    msg.get("content")
-                    or msg.get("query")
-                    or msg.get("answer")
-                    or ""
-                ).strip()
-                if content:
-                    if role == "User":
-                        history_lines.append(f"**User:** {content}")
-                    elif role == "Assistant":
-                        history_lines.append(f"**Assistant:** {content}\n")
-        if history_lines:
-            prompt_parts.append("## Conversation History:\n" + "\n".join(history_lines))
+            content = msg.get("content", "").strip()
+            if role in ["User", "Assistant"] and content:
+                lines.append(f"**{role}:** {content}")
+        if lines:
+            prompt_parts.append("## Conversation History:\n" + "\n".join(lines))
 
-    if getattr(state, "api_response", None) and getattr(state, "route_to", "") not in ["rag", "hybrid"]:
-        prompt_parts.append("## Stock Data:\n" + state.api_response.strip() + "\n")
-            
-    # Retrieved Context
-    retrieved_docs = getattr(state, "retrieved_docs", []) or []
-    if retrieved_docs:
-        context_parts = []
-        for doc in sorted(retrieved_docs, key=lambda d: d.get("score", 0.0), reverse=True):
-            text = (doc.get("content") or doc.get("summary") or "").strip()
-            if text:
-                if len(text) > 500:
-                    text = text[:500] + "..."
-                title = doc.get("title", "")
-                url = doc.get("url", "")
-                time = doc.get("time", "")
-                score = doc.get("score", None)
-
-                meta = " | ".join(filter(None, [
-                    title, time,
-                    f"score={score:.3f}" if score is not None else None, 
-                    f"Link: {url}" if url else None
-                ]))
-                context_parts.append(f"[{meta}]\n{text}")
-
-        context_text = "\n\n".join(context_parts)
-    # if len(context_text) > max_context_chars:
-    #     context_text = context_text[:max_context_chars] + "...\n"
-        prompt_parts.append("## Retrieved Context:\n" + context_text)
-    else:
-        prompt_parts.append("## Retrieved Context:\nKhông có tài liệu nào được lấy từ Qdrant (-> kiểm tra retriever).")
-    
-    intent_instructions = {
-        "stock": "Phân tích hoặc tóm tắt dữ liệu cổ phiếu, chỉ số hoặc biến động thị trường Việt Nam.",
-        "news": "Tóm tắt nhanh tin tức tài chính/chứng khoán Việt Nam gần đây.",
-        "weather": "Trả lời thông tin thời tiết Việt Nam.",
-        "time": "Trả lời về ngày giờ, thời gian hoặc lịch hiện tại.",
-        "rag": "Phân tích câu hỏi tổng quát bằng cách dùng Context."
-    }
-    intent_task = intent_instructions.get(state.intent or "rag", "Trả lời câu hỏi tài chính tổng quát.")
-    if state.intent == "news":
-        prompt_parts.append("""
-            ## Output Guidelines:
-            - Hãy tóm tắt 3–5 câu tin tài chính hoặc chứng khoán Việt Nam gần nhất từ Context.
-            - Nếu có nhiều tin, ưu tiên tin về các công ty lớn (VIX, SSI, HPG, VCB,...).
-            - Nếu không có tin nổi bật, hãy nói rõ “Không tìm thấy tin tài chính đáng chú ý hôm nay”.
-            - Không viết placeholder, không lặp lại tiêu đề, không thêm lời khuyên đầu tư.
-            - Chỉ dùng dữ liệu có trong Context.
-                """)
-    prompt_parts.append(f"## Task Type:\nIntent: {state.intent}\nMô tả: {intent_task}")
-
-    # User query
-    user_input = (state.user_query or state.processed_query or "").strip()
-    prompt_parts.append(f"\n## Task Input:\n**User:** {user_input}")
+    prompt_parts.append(f"## Task Type:\nIntent: {intent}\nMô tả: {task}\n")
+    prompt_parts.append(f"## Task Input:\n**User:** {user_input}\n")
 
     if lang == "vi":
-        lang_instruction = "- Luôn trả lời bằng TIẾNG VIỆT nếu có từ ngữ chuyên ngành (VNINDEX, VN30,..) thì giữ nguyên dạng gốc"
+        lang_instruction = "- Luôn trả lời bằng TIẾNG VIỆT nếu có từ ngữ chuyên ngành (VNINDEX, VN30,..) thì giữ nguyên."
     else:
         lang_instruction = f"- Ưu tiên trả lời bằng ngôn ngữ '{lang}'."
 
-    joined_parts = "\n\n".join(prompt_parts)
+    state.prompt = "\n\n".join([
+        lang_instruction,
+        "\n".join(prompt_parts),
+        "## Task Output:",
+        "**Assistant:**"
+    ]).strip()
 
-    state.prompt = "\n\n".join([lang_instruction, joined_parts,"## Task Output:","**Assistant:**\n"]).strip()
-
-    print(state.prompt)
-
-    if getattr(state,"debug", False):
-        print("*** FINAL PROMPT SAMPLE ***")
-        print(state.prompt[:600], flush=True)
-
-    # Debug
-    # state.add_debug("prompt_length", len(state.prompt))
-    # state.add_debug("prompt_preview", state.prompt[:400])
-    # state.add_debug("history_count", len(history_msgs))
-    # state.add_debug("context_docs_count", len(retrieved_docs))
-    # state.add_debug("prompt_bulder_status", "RAG prompt built")
+    state.llm_status = "prompt_built_success"
+    state.add_debug("prompt_intent", intent)
+    state.add_debug("prompt_status", "built_success")
 
     return state

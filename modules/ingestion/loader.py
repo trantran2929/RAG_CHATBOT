@@ -74,6 +74,7 @@ def load_to_vector_db(docs: List[Dict], collection_name: str = None, batch_size:
     
     print(f"[Loader] Sau khi lọc còn {len(valid_docs)} tài liệu hợp lệ.")
 
+    valid_docs.sort(key=lambda d: normalize_time_str(d.get("time", ""))["time_ts"], reverse=True)
     corpus = [doc.get("content", "") for doc in docs]
     embedder_services.fit_bm25(corpus)
 

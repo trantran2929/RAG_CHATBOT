@@ -1,6 +1,6 @@
 from modules.core.state import GlobalState
-from modules.utils.services import qdrant_services
-from qdrant_client.models import FusionQuery
+from modules.utils.services import qdrant_services, reranker_services
+from time import perf_counter
 import pytz
 from datetime import datetime, timedelta
 from qdrant_client import models
@@ -13,11 +13,10 @@ def normalize_score(score: float) -> float:
 
 def search_vector_db(state: GlobalState, top_k: int = 5, alpha: float = 0.7) -> GlobalState:
     """
-    Hybrid search (dense + sparse) trong Qdrant.
+    Hybrid search (dense + sparse) trong Qdrant + reranker sắp xếp lại.
     - Chỉ chạy khi route_to = {"rag", "hybrid"}
-    - Nếu có api_response hoặc không có embedding thì bỏ qua
     - Có time_filter thì lọc theo mốc thời gian
-    - Kết hợp dense + sparse theo trong số alpha
+    - Reranker dùng CrossEncoder
     """
     if getattr(state, "route_to", "") not in ["rag", "hybrid"]:
         state.search_results = []
@@ -38,18 +37,16 @@ def search_vector_db(state: GlobalState, top_k: int = 5, alpha: float = 0.7) -> 
     if dense_vec is None and sparse_vec is None:
         state.add_debug("vector_db", "No valid vectors found")
         state.search_results = []
-        state.llm_status = "vector_db_empty_vectors"
         return state
 
     vn_tz = pytz.timezone("Asia/Ho_Chi_Minh")
     now_vn = datetime.now(vn_tz)
-    now_utc = now_vn.astimezone(pytz.utc)
 
     if getattr(state, "time_filter", None):
         start_ts, end_ts = state.time_filter
     else:
-        start_ts = int((now_utc-timedelta(days=3)).timestamp())
-        end_ts = int(now_utc.timestamp())
+        start_ts = int((now_vn-timedelta(days=3)).timestamp())
+        end_ts = int(now_vn.timestamp())
 
     search_filter = models.Filter(
         must=[
@@ -61,6 +58,7 @@ def search_vector_db(state: GlobalState, top_k: int = 5, alpha: float = 0.7) -> 
     )
 
     try:
+        start = perf_counter()
         prefetches = []
 
         if dense_vec is not None:
@@ -87,7 +85,6 @@ def search_vector_db(state: GlobalState, top_k: int = 5, alpha: float = 0.7) -> 
         if not prefetches:
             state.add_debug("vector_db", "No valid prefetch queries")
             state.search_results = []
-            state.llm_status = "vector_db_no_query"
             return state
         
         result = qdrant_services.client.query_points(
@@ -108,20 +105,25 @@ def search_vector_db(state: GlobalState, top_k: int = 5, alpha: float = 0.7) -> 
                 "title": payload.get("title",""),
                 "time": payload.get("time",""),
                 "time_ts": payload.get("time_ts", ""),
-                "content": (payload.get("content") or "")[:300]
+                "content": (payload.get("content") or "")[:1000]
             })
         
+        # reranker
+        if hits and getattr(state, "use_reranker", True):
+            hits = reranker_services.rerank(state.user_query, hits)
+            state.add_debug("reranker_status", "applied")
+        else:
+            state.add_debug("reranker_status", "skipped")
+            state.add_debug("reranker_status", "skipped")
+
+        elapsed = round(perf_counter() - start, 3)
         state.search_results = hits
         state.llm_status = "vector_db_success"
-        state.add_debug("vector_db_status", "success")
         state.add_debug("vector_db_results", len(hits))
-        state.add_debug("vector_db_alpha", alpha)
-        state.add_debug("vector_db_time_range", (start_ts, end_ts))
-        state.add_debug("vector_db_query_type", getattr(state, "route_to", "unknown"))
 
         if getattr(state, "debug", False):
             print(f"[FusionSearch] Found {len(hits)} results")
-            for r in hits[:3]:
+            for r in hits[:5]:
                 print(f"{r['title']} | score={r['score']} | time_ts={r['time_ts']}")
 
     except Exception as e:

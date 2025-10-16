@@ -95,6 +95,7 @@ def get_stock_quote(symbol: str) -> dict:
         floor_price = data.get("match_floor_price") or data.get("listing_floor")
         volume_val = data.get("match_accumulated_volume") or data.get("match_match_vol") or 0
 
+        # Nếu giá khớp = 0 → fallback
         if not price or price == 0:
             raise ValueError("Không có giá khớp lệnh hợp lệ (match_price = 0).")
 
@@ -117,7 +118,7 @@ def get_stock_quote(symbol: str) -> dict:
     except Exception as e:
         print(f"[VNStock] Lỗi lấy dữ liệu cổ phiếu {symbol}: {e}")
         try:
-            # fallback sang lịch sử
+            # 🩹 fallback sang lịch sử
             quote = Quote(symbol=symbol, source="VCI")
             df = quote.history(
                 start=(datetime.now() - timedelta(days=5)).strftime("%Y-%m-%d"),
@@ -125,14 +126,19 @@ def get_stock_quote(symbol: str) -> dict:
             )
             if not df.empty:
                 last = df.iloc[-1]
-                trade_date = (
-                    datetime.strptime(str(last.name)[:10], "%Y-%m-%d").strftime("%d-%m-%Y")
-                    if last.name else "phiên gần nhất"
-                )
+
+                # Sửa phần parse date: dùng try/except
+                try:
+                    idx_val = str(last.name)
+                    trade_date = datetime.strptime(idx_val[:10], "%Y-%m-%d").strftime("%d-%m-%Y")
+                except Exception:
+                    trade_date = "phiên gần nhất"
+
                 open_price = float(last.get("open", 0))
                 close_price = float(last.get("close", 0))
                 change_val = close_price - open_price
                 change_pct = (change_val / open_price * 100) if open_price else 0
+
                 return {
                     "symbol": symbol.upper(),
                     "price": close_price,
@@ -149,8 +155,14 @@ def get_stock_quote(symbol: str) -> dict:
                 }
         except Exception as ex:
             print(f"[VNStock] Fallback Quote lỗi: {ex}")
-        return {"symbol": symbol.upper(), "error": str(e)}
-    
+
+        # Nếu tất cả đều lỗi → trả kết quả rỗng thay vì exception
+        return {
+            "symbol": symbol.upper(),
+            "price": None,
+            "error": f"Không có dữ liệu giao dịch gần đây ({e})"
+        }
+
 @TTLCache(ttl_seconds=300)
 def get_top_stocks(limit: int = 10, direction: str = "up") -> list:
     try:
