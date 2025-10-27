@@ -1,15 +1,16 @@
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 import redis
-from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, AutoModelForSequenceClassification
 from transformers.pipelines import pipeline
 import torch
 from dotenv import load_dotenv
 from huggingface_hub import login
-import os
+import os, time
 from rank_bm25 import BM25Okapi
 from sentence_transformers import CrossEncoder
 import requests
+import numpy as np
 from langchain.chat_models import init_chat_model
 
 # Load biến môi trường
@@ -51,13 +52,11 @@ class QdrantServices:
 
 qdrant_services = QdrantServices()
 
-
 class RedisCacheServices:
     def __init__(self, db=0):
         host = os.getenv("REDIS_HOST", "localhost")
         port = int(os.getenv("REDIS_PORT", 6379))
         self.client = redis.Redis(host=host, port=port, db=db, decode_responses=True)
-
 
 redis_services = RedisCacheServices()
 
@@ -157,9 +156,6 @@ class EmbedderServices:
         self.vocab = {token: idx for idx, token in enumerate(unique_tokens)}
 
     def auto_fit_bm25(self, collection_name, max_docs=5000):
-        """
-        Tự động fit BM25 từ Qdrant nếu chưa được fit
-        """
         try:
             docs, _ = qdrant_services.client.scroll(
                 collection_name=collection_name,
@@ -172,14 +168,12 @@ class EmbedderServices:
                 text = payload.get("content") or payload.get("summary")
                 if text and len(text.split()) > 5:
                     corpus.append(text)
-            
             if corpus:
                 self.fit_bm25(corpus)
             else:
                 print("[BM25] Không tìm thấy dữ liệu để fit BM25")
-            
         except Exception as e:
-            print("[BM25] Lỗi auto_fit BM25: {e}")
+            print(f"[BM25] Lỗi auto_fit BM25: {e}")
 
     def encode_dense(self, texts):
         if isinstance(texts, str):
@@ -248,3 +242,137 @@ class RerankerServices:
         docs.sort(key=lambda x: x["rerank_score"], reverse=True)
         return docs
 reranker_services =RerankerServices()
+
+class SentimentServices:
+    """
+    Chuẩn hoá output:
+      - sentiment ∈ [-1..+1] = P(pos) - P(neg)
+      - label ∈ {'neg','neu','pos'} theo argmax
+    Model mặc định: cardiffnlp/twitter-xlm-roberta-base-sentiment (NEG/NEU/POS).
+    Tự động fallback -> 'neu', 0.0 nếu lỗi hoặc input quá ngắn.
+    """
+    def __init__(self,
+                 model_id: str = "cardiffnlp/twitter-xlm-roberta-base-sentiment",
+                 device: str | None = None,
+                 max_len: int = 1000):
+        import torch
+        from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+
+        self.max_len = int(max_len)
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.ready = False
+
+        try:
+            tok = AutoTokenizer.from_pretrained(model_id)
+            mdl = AutoModelForSequenceClassification.from_pretrained(model_id)
+            self.pipe = pipeline(
+                "text-classification",
+                model=mdl,
+                tokenizer=tok,
+                device=0 if self.device == "cuda" else -1,
+                truncation=True,
+                return_all_scores=True
+            )
+            # Chuẩn hoá nhãn từ config (LABEL_0/1/2 hoặc negative/neutral/positive)
+            id2label = getattr(mdl.config, "id2label", None)
+            if isinstance(id2label, dict) and len(id2label) >= 2:
+                labset = {str(v).lower() for v in id2label.values()}
+            else:
+                labset = {"label_0", "label_1", "label_2"}
+
+            self.has_neutral = any("neu" in x or "neutral" in x for x in labset)
+            self.ready = True
+        except Exception as e:
+            print(f"[Sentiment] init failed: {e}")
+            self.pipe = None
+
+    @staticmethod
+    def _pack_from_scores(scores: list[dict]) -> dict:
+        """
+        scores: list[{'label': 'NEGATIVE/NEUTRAL/POSITIVE' (hoặc LABEL_0/1/2), 'score': float}, ...]
+        Trả về {'label','sentiment'} với label ∈ {'neg','neu','pos'}.
+        """
+        p = {"neg": 0.0, "neu": 0.0, "pos": 0.0}
+        for s in scores:
+            lab = s.get("label", "").lower()
+            sc = float(s.get("score", 0.0))
+
+            if any(k in lab for k in ("neg", "label_0", "negative")):
+                p["neg"] = max(p["neg"], sc)
+            elif any(k in lab for k in ("neu", "label_1", "neutral")):
+                p["neu"] = max(p["neu"], sc)
+            elif any(k in lab for k in ("pos", "label_2", "positive")):
+                p["pos"] = max(p["pos"], sc)
+
+        # nếu model nhị phân (không có neutral), dồn phần còn lại cho 'neu'=0
+        # sentiment = P(pos) - P(neg)
+        sentiment = float(p["pos"] - p["neg"])
+
+        # chọn nhãn theo xác suất lớn nhất
+        label = max(p.items(), key=lambda kv: kv[1])[0]
+        return {"label": label, "sentiment": float(max(-1.0, min(1.0, sentiment)))}
+
+    def analyze(self, title: str = "", summary: str = "", content: str = "") -> dict:
+        """
+        Dùng cho từng bài/chunk. Ưu tiên title+summary; rỗng thì fallback content.
+        """
+        if not self.ready:
+            return {"label": "neu", "sentiment": 0.0}
+
+        base = " ".join(t for t in [title or "", summary or ""] if t).strip()
+        if not base:
+            base = (content or "").strip()
+        if len(base) < 10:
+            return {"label": "neu", "sentiment": 0.0}
+
+        text = base[: self.max_len]
+        try:
+            out = self.pipe(text)
+            scores = out[0] if isinstance(out, list) and out and isinstance(out[0], list) else out
+            return self._pack_from_scores(scores)
+        except Exception as e:
+            print(f"[Sentiment] predict error: {e}")
+            return {"label": "neu", "sentiment": 0.0}
+
+    def analyze_text(self, text: str) -> dict:
+        """Phân tích trực tiếp 1 string."""
+        return self.analyze("", "", text)
+
+    def analyze_batch(self, items: list[dict]) -> list[dict]:
+        """
+        Batch API (nhanh hơn gọi từng cái).
+        items: [{'title':..., 'summary':..., 'content':...}, ...]
+        Trả về list [{'label','sentiment'}...], giữ nguyên thứ tự.
+        """
+        if not self.ready or not items:
+            return [{"label": "neu", "sentiment": 0.0} for _ in (items or [])]
+
+        texts = []
+        for it in items:
+            title = it.get("title", "") or ""
+            summary = it.get("summary", "") or ""
+            content = it.get("content", "") or ""
+            base = " ".join(t for t in [title, summary] if t).strip() or content.strip()
+            if len(base) < 10:
+                base = ""
+            texts.append(base[: self.max_len] if base else "")
+
+        results = []
+        try:
+            outs = self.pipe(texts, truncation=True)
+            for out in outs:
+                if not out:
+                    results.append({"label": "neu", "sentiment": 0.0})
+                else:
+                    results.append(self._pack_from_scores(out))
+        except Exception as e:
+            print(f"[Sentiment] batch error: {e}")
+            results = [{"label": "neu", "sentiment": 0.0} for _ in texts]
+
+        return results
+
+try:
+    sentiment_services = SentimentServices()
+except Exception as _e:
+    print("[Sentiment] global init failed:", _e)
+    sentiment_services = None

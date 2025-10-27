@@ -63,11 +63,14 @@ services:
     networks:
       - chatbot-net
     environment:
-      - REDIS_HOSTS=redis
-      - REDIS_PORTS=6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - HF_TOKEN=${HF_TOKEN}
+      - QDRANT_COLLECTION=cafef_articles
+      - INGEST_INTERVAL=3600
+      - CRAWL_MAX_PAGES=1
     restart: unless-stopped
 
 volumes:

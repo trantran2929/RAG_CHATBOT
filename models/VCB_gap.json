@@ -1,0 +1,132 @@
+{
+  "symbol": "VCB",
+  "order": [
+    1,
+    0,
+    0
+  ],
+  "trend": "n",
+  "use_exog": true,
+  "feature_cols": [
+    "news_count",
+    "pos_count",
+    "neg_count",
+    "neu_count",
+    "mean_sent",
+    "sum_sent",
+    "idx_VNINDEX_news_count",
+    "idx_VNINDEX_pos_count",
+    "idx_VNINDEX_neg_count",
+    "idx_VNINDEX_neu_count",
+    "idx_VNINDEX_mean_sent",
+    "idx_VNINDEX_sum_sent",
+    "idx_VN30_news_count",
+    "idx_VN30_pos_count",
+    "idx_VN30_neg_count",
+    "idx_VN30_neu_count",
+    "idx_VN30_mean_sent",
+    "idx_VN30_sum_sent",
+    "ret_lag1",
+    "ret_lag2",
+    "ret_lag5"
+  ],
+  "scaler": {
+    "news_count": {
+      "mu": 0.008241758241758242,
+      "sd": 0.09053369044416568
+    },
+    "pos_count": {
+      "mu": 0.0027472527472527475,
+      "sd": 0.052414241836095915
+    },
+    "neg_count": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "neu_count": {
+      "mu": 0.005494505494505495,
+      "sd": 0.0740227607951281
+    },
+    "mean_sent": {
+      "mu": 0.0027386276972490354,
+      "sd": 0.035715182961767074
+    },
+    "sum_sent": {
+      "mu": 0.0027386276972490354,
+      "sd": 0.035715182961767074
+    },
+    "idx_VNINDEX_news_count": {
+      "mu": 0.008241758241758242,
+      "sd": 0.09053369044416568
+    },
+    "idx_VNINDEX_pos_count": {
+      "mu": 0.0027472527472527475,
+      "sd": 0.052414241836095915
+    },
+    "idx_VNINDEX_neg_count": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VNINDEX_neu_count": {
+      "mu": 0.005494505494505495,
+      "sd": 0.0740227607951281
+    },
+    "idx_VNINDEX_mean_sent": {
+      "mu": 0.002575468476657029,
+      "sd": 0.031880668755000376
+    },
+    "idx_VNINDEX_sum_sent": {
+      "mu": 0.002575468476657029,
+      "sd": 0.031880668755000376
+    },
+    "idx_VN30_news_count": {
+      "mu": 0.005494505494505495,
+      "sd": 0.0740227607951281
+    },
+    "idx_VN30_pos_count": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VN30_neg_count": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VN30_neu_count": {
+      "mu": 0.005494505494505495,
+      "sd": 0.0740227607951281
+    },
+    "idx_VN30_mean_sent": {
+      "mu": 0.0006989550336704149,
+      "sd": 0.009673252600768583
+    },
+    "idx_VN30_sum_sent": {
+      "mu": 0.0006989550336704149,
+      "sd": 0.009673252600768583
+    },
+    "ret_lag1": {
+      "mu": -6.65977989747447e-05,
+      "sd": 0.012281779416720684
+    },
+    "ret_lag2": {
+      "mu": -0.0001331955979494924,
+      "sd": 0.01759518593759268
+    },
+    "ret_lag5": {
+      "mu": -0.0003028253129009673,
+      "sd": 0.02457989695334142
+    }
+  },
+  "train_len": 364,
+  "timestamp": "27-10-2025 09:21:54",
+  "target": "gap_ret",
+  "add_index": [
+    "VNINDEX",
+    "VN30"
+  ],
+  "aic": -2129.7149668499505,
+  "rmse_in_sample": 0.012068382163758237,
+  "mae_in_sample": 0.006544079091570114,
+  "last_close": 59.8,
+  "ret_hat_next": 7.859905196408807e-05,
+  "next_price_est": 59.804700408028836
+}

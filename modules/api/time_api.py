@@ -9,15 +9,19 @@ WEEKDAYS_VN = {
 
 def get_now(tz: str = "Asia/Ho_Chi_Minh") -> datetime:
     return datetime.now(pytz.timezone(tz))
+
 def format_full(dt: datetime) -> str:
     if dt is None:
         dt = get_now()
     weekday = WEEKDAYS_VN[dt.weekday()]
     return f"{weekday}, Ngày {dt.day:02d} tháng {dt.month:02d} năm {dt.year}"
+
 def format_date(dt: datetime)->str:
     return f"Ngày {dt.day:02d} tháng {dt.month:02d} năm {dt.year}"
+
 def format_weekday(dt: datetime) -> str:
     return WEEKDAYS_VN[dt.weekday()]
+
 def add_time(now: datetime, num: int, unit: str) -> datetime:
     if unit == "ngày":
         return now + timedelta(days=num)
@@ -32,6 +36,7 @@ def add_time(now: datetime, num: int, unit: str) -> datetime:
     elif unit == "năm":
         return now.replace(year=now.year + num)
     return now
+
 def get_datetime_context()->str:
     now = get_now()
     return (
@@ -46,7 +51,6 @@ def get_current_time() -> str:
     """Trả về giờ hiện tại (HH:MM:SS)"""
     now = get_now()
     return now.strftime("%H:%M:%S")
-
 
 def get_current_date() -> str:
     """Trả về ngày hiện tại (dd/mm/yyyy)"""

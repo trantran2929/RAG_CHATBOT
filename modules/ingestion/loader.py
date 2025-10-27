@@ -1,129 +1,159 @@
-import uuid
-from typing import List, Dict
-from modules.utils.services import qdrant_services, embedder_services
+import os
+from typing import List, Dict, Optional
 from qdrant_client import models
-from datetime import datetime
-from dateutil import parser
-import pytz, hashlib, time
+from modules.utils.services import qdrant_services, embedder_services, sentiment_services
 
-def normalize_time_str(time_str: str) -> dict:
+def _collection_name() -> str:
+    return os.getenv(
+        "QDRANT_COLLECTION",
+        getattr(qdrant_services, "collection_name", "cafef_articles"),
+    )
+
+def _neutral_pack() -> Dict[str, float | str]:
+    return {"label": "neu", "sentiment": 0.0}
+
+def _infer_sentiment_batch(batch_docs: List[Dict]) -> List[Dict]:
     """
-    Chuyển time string sang dict {time_str, time_ts}
-    - Cố gắng parse nhiều format khác nhau
-    - Nếu không parse được thì trả về None cho time_ts
+    Nhận list docs -> trả list kết quả sentiment theo thứ tự.
+    Nếu không có model / lỗi -> trả neutral.
     """
-    vn_tz = pytz.timezone("Asia/Ho_Chi_Minh")
-
-    if not time_str or not isinstance(time_str, str):
-        now =datetime.now(vn_tz)
-        return {"time_str": now.strftime("%d-%m-%Y, %H:%M:%S"), "time_ts": int(now.timestamp())}
-
+    if not batch_docs:
+        return []
+    if not sentiment_services or not hasattr(sentiment_services, "analyze_batch"):
+        return [_neutral_pack() for _ in batch_docs]
     try:
-        #hỗ trợ ISO, dd-mm-YYYY, dd/mm/YYYY ...
-        dt = parser.parse(time_str, dayfirst=True)
-
-        # Nếu datetime chưa có tzinfo thì gán Asia/Ho_Chi_Minh
-        if not dt.tzinfo:
-            dt = vn_tz.localize(dt)
-        else:
-            dt = dt.astimezone(vn_tz)
-
-        return {
-            "time_str": dt.strftime("%d-%m-%Y %H:%M:%S"),
-            "time_ts": int(dt.timestamp())
-        }
-
+        items = [
+            {
+                "title": d.get("title", "") or "",
+                "summary": d.get("summary", "") or "",
+                "content": d.get("content", "") or "",
+            }
+            for d in batch_docs
+        ]
+        out = sentiment_services.analyze_batch(items)
+        fixed: List[Dict] = []
+        for r in out:
+            if isinstance(r, dict) and "label" in r and "sentiment" in r:
+                try:
+                    fixed.append(
+                        {
+                            "label": str(r.get("label", "neu")),
+                            "sentiment": float(r.get("sentiment", 0.0)),
+                        }
+                    )
+                except Exception:
+                    fixed.append(_neutral_pack())
+            else:
+                fixed.append(_neutral_pack())
+        if len(fixed) != len(batch_docs):
+            fixed = fixed[: len(batch_docs)] + [_neutral_pack()] * max(
+                0, len(batch_docs) - len(fixed)
+            )
+        return fixed
     except Exception as e:
-        now = datetime.now(vn_tz)
-        print(f"Parse lỗi ({time_str}): {e}")
-        return {
-            "time_str": now.strftime("%d-%m-%Y %H:%M:%S"),
-            "time_ts": int(now.timestamp())
-        }
+        print(f"[Loader] Sentiment error: {e}")
+        return [_neutral_pack() for _ in batch_docs]
 
+def _stable_point_id(d: Dict, j: int) -> str:
+    """Ưu tiên d['id']; nếu thiếu, sinh id ổn định từ url|title|time_ts|j."""
+    import hashlib
+    sid = d.get("id")
+    if sid:
+        return str(sid)
+    m = hashlib.md5()
+    m.update((d.get("url", "") or "").encode("utf-8"))
+    m.update(b"|")
+    m.update((d.get("title", "") or "").encode("utf-8"))
+    m.update(b"|")
+    m.update(str(int(d.get("time_ts", 0))).encode("utf-8"))
+    m.update(b"|")
+    m.update(str(j).encode("utf-8"))
+    return m.hexdigest()
 
-def load_to_vector_db(docs: List[Dict], collection_name: str = None, batch_size: int = 100) -> int:
-    """Nhận docs (có thể gồm nhiều chunk), tạo dense + sparse embeddings, upsert vào Qdrant."""
+def load_to_vector_db(
+    docs: List[Dict],
+    collection_name: Optional[str] = None,
+    batch_size: int = 128,
+) -> int:
+    """
+    - Yêu cầu: mỗi doc cần có 'content' và 'time_ts'
+    - Gán sentiment/label theo batch.
+    - Upsert vào Qdrant dưới dạng vector dense + sparse.
+    """
     if not docs:
         return 0
 
-    start_all = time.time()
-    coll = collection_name or qdrant_services.collection_name
+    coll = collection_name or _collection_name()
+    print(f"[Loader] {len(docs)} docs → collection='{coll}'")
 
-    # Không loại trùng theo URL — vì mỗi chunk là 1 point riêng biệt
-    print(f"[Loader] Nhận {len(docs)} đoạn văn cần upload lên Qdrant...")
-
-    #Lọc bỏ các doc trống nội dung
-    valid_docs = []
-    for doc in docs:
-        content_text = (
-            doc.get("content") or
-            doc.get("summary") or
-            doc.get("title") or
-            ""
-        ).strip()
-        if not content_text:
+    valid: List[Dict] = []
+    for d in docs:
+        txt = (d.get("content") or d.get("summary") or d.get("title") or "").strip()
+        if not txt:
+            continue
+        if "time_ts" not in d:
             continue
 
-        doc["content"] = content_text
-        valid_docs.append(doc)
-    
-    if not valid_docs:
-        print("[Loader] Tất cả tài liệu đều rỗng, không có gì upload")
-        return 0
-    
-    print(f"[Loader] Sau khi lọc còn {len(valid_docs)} tài liệu hợp lệ.")
+        d = dict(d)
+        d["content"] = txt
+        d["symbols"] = d.get("symbols", []) or []
+        d["index_codes"] = d.get("index_codes", []) or []
+        if "time" not in d:
+            d["time"] = ""  
+        valid.append(d)
 
-    valid_docs.sort(key=lambda d: normalize_time_str(d.get("time", ""))["time_ts"], reverse=True)
-    corpus = [doc.get("content", "") for doc in docs]
-    embedder_services.fit_bm25(corpus)
+    if not valid:
+        print("[Loader] 0 docs hợp lệ.")
+        return 0
 
     total = 0
-    for start in range(0, len(docs), batch_size):
-        batch = docs[start:start + batch_size]
-        text = [doc.get("content", "") for doc in batch]
+    for start in range(0, len(valid), batch_size):
+        batch = valid[start : start + batch_size]
+        senti_res = _infer_sentiment_batch(batch)
 
-        dense_vecs = embedder_services.encode_dense(text)
-        sparse_vecs = embedder_services.encode_sparse(text)
+        texts = [b["content"] for b in batch]
 
-        points = []
-        for i, doc in enumerate(batch):
-            # Tạo id duy nhất theo (url + index + md5)
-            base_key = f"{doc.get('url','')}_{i}_{uuid.uuid4()}"
-            point_id = hashlib.md5(base_key.encode("utf-8")).hexdigest()
+        dense_vecs = embedder_services.encode_dense(texts)
 
-            sparse_raw = sparse_vecs[i]
-            sparse_vec = models.SparseVector(
-                indices=sparse_raw["indices"],
-                values=sparse_raw["values"]
-            )
+        sparse_vecs = embedder_services.encode_sparse(texts)
 
-            time_info = normalize_time_str(doc.get("time", ""))
+        points: List[models.PointStruct] = []
+        for j, d in enumerate(batch):
+            pid = _stable_point_id(d, j)
+            sp = sparse_vecs[j]
+            s_out = senti_res[j] if j < len(senti_res) else _neutral_pack()
+
+            payload = {
+                "id": pid,
+                "title": d.get("title", "") or "",
+                "url": d.get("url", "") or "",
+                "time": d.get("time", "") or "",
+                "time_ts": int(d.get("time_ts", 0)),
+                "summary": d.get("summary", "") or "",
+                "content": d.get("content", "") or "",
+                "symbols": list(d.get("symbols", []) or []),
+                "index_codes": list(d.get("index_codes", []) or []),
+                "sentiment": float(s_out.get("sentiment", 0.0)),
+                "label": str(s_out.get("label", "neu")),
+                "source": d.get("source", "cafef") or "cafef",
+            }
 
             points.append(
                 models.PointStruct(
-                    id=point_id,
+                    id=pid,
                     vector={
-                        "dense_vector": dense_vecs[i],
-                        "sparse_vector": sparse_vec
+                        "dense_vector": dense_vecs[j],
+                        "sparse_vector": models.SparseVector(
+                            indices=[int(x) for x in sp["indices"]],
+                            values=[float(v) for v in sp["values"]],
+                        ),
                     },
-                    payload={
-                        "id": point_id,
-                        "title": doc.get("title", ""),
-                        "time": time_info["time_str"],
-                        "time_ts": time_info["time_ts"],
-                        "summary": doc.get("summary", ""),
-                        "url": doc.get("url", ""),
-                        "content": doc.get("content", ""),
-                        "source": doc.get("source", "cafef"),
-                        "chunk_index": i,   
-                    }
+                    payload=payload,
                 )
             )
 
         qdrant_services.client.upsert(collection_name=coll, points=points)
         total += len(points)
 
-    elapsed = round(time.time() - start_all, 2)
-    print(f"[Loader] Đã upload {total} chunks lên Qdrant trong {elapsed}s\n")
+    print(f"[Loader] Upserted {total} points → '{coll}'")
     return total

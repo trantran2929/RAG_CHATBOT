@@ -42,7 +42,7 @@ class GlobalState:
     context: str = ""
     # Tickers được trích xuất từ user_query
     tickers: List[str] = field(default_factory=list)
-    time_filter: Optional[tuple] = None
+    time_filter: Optional[tuple[int, int]] = None  # (start_ts, end_ts) epoch seconds (UTC-ish)
 
     # Few-shot
     examples: List[Dict[str,str]] = field(default_factory=list)
@@ -65,7 +65,7 @@ class GlobalState:
     debug_info: Dict[str, Any] = field(default_factory=dict)
 
     # Toàn bộ messages trong hội thoại hiện tại
-    messages: List[Dict[str, str]] = field(default_factory=list, metadata={"reducer": add_messages})
+    messages: List[Dict[str, str]] = field(default_factory=list)
     # Lịch sử hội thoại
     conversation_history: List[Dict[str, str]] = field(default_factory=list)
 

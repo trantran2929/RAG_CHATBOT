@@ -1,0 +1,20 @@
+{
+  "symbol": "VCB",
+  "tag": "gap",
+  "order": [
+    0,
+    0,
+    0
+  ],
+  "trend": "n",
+  "use_exog": true,
+  "feature_cols": [
+    "news_count",
+    "pos_count",
+    "neg_count",
+    "mean_sent",
+    "sum_sent"
+  ],
+  "trained_samples": 269,
+  "timestamp": "20-10-2025 08:11:05"
+}

@@ -3,14 +3,14 @@ import os
 import sys
 import json
 import uuid
+import time
 
-# Thêm folder gốc vào path
+# Thêm folder gốc vào path (để import modules.*)
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from modules.core.graph import build_graph
 from modules.core.state import GlobalState
 from modules.utils.services import redis_services
-from modules.nodes.prompt_builder import build_prompt
 
 # UI CONFIG
 st.set_page_config(page_title="Chatbot AI", layout="wide")
@@ -18,28 +18,32 @@ st.title("🤖 Chatbot AI")
 
 graph = build_graph()
 
-# Khởi tạo session state
+# Session init
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
+
 # SIDEBAR 
 with st.sidebar:
     st.subheader("⚙️ Tùy chọn")
     st.write(f"**Session ID:** `{st.session_state.session_id}`")
 
-    if st.button("🗑️ Xóa toàn bộ lịch sử trong Redis"):
+    if st.button("🗑️ Xóa lịch sử phiên hiện tại"):
         try:
-            redis_services.client.flushdb()
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.success("Đã xóa toàn bộ dữ liệu!")
+            this_key = f"chat:{st.session_state.session_id}"
+            redis_services.client.delete(this_key)
+
+            # clear lịch sử trong session_state
+            st.session_state.chat_history = []
+
+            st.success("Đã xoá lịch sử cho phiên hiện tại!")
             st.info("Trang sẽ tự động reload...")
-            import time
             time.sleep(0.5)
             st.rerun()
         except Exception as e:
             st.error(f"Lỗi khi xóa dữ liệu: {str(e)}")
+
 
     if st.button("🔍 Debug Redis Keys"):
         try:
@@ -55,7 +59,7 @@ with st.sidebar:
         except Exception as e:
             st.error(f"Lỗi khi debug: {str(e)}")
 
-# LOAD CACHE 
+# LOAD CACHE từ Redis vào session_state
 key = f"chat:{st.session_state.session_id}"
 cached = redis_services.client.get(key)
 if cached:
@@ -78,11 +82,11 @@ def render_sources(sources):
     with st.expander("📚 Nguồn tham khảo"):
         for src in sources:
             title = src.get("title", "Không tiêu đề")
-            link = src.get("link", "")
-            time = src.get("time", "")
+            link = src.get("url", "")
+            t = src.get("time", "")
             score = src.get("score", None)
 
-            meta = f"{title} ({time})"
+            meta = f"{title} ({t})"
             if score is not None:
                 meta += f" | score={score:.3f}"
 
@@ -102,7 +106,7 @@ def display_history():
             st.markdown(content)
             if role == "assistant":
                 render_sources(msg.get("sources"))
-                
+
 display_history()
 
 if user_input := st.chat_input("💬 Nhập tin nhắn của bạn..."):
@@ -120,6 +124,7 @@ if user_input := st.chat_input("💬 Nhập tin nhắn của bạn..."):
                 history_from_cache = loaded_data.get("history", [])
         except:
             history_from_cache = []
+
     state = GlobalState(
         user_query=user_input,
         session_id=st.session_state.session_id,
@@ -133,13 +138,12 @@ if user_input := st.chat_input("💬 Nhập tin nhắn của bạn..."):
                 state = graph.invoke(state)
                 response = state.get("final_answer", "❌ Xin lỗi, không có câu trả lời.")
 
-                # Chỉ giữ metadata sources
                 sources = []
                 if getattr(state, "retrieved_docs", None):
                     for doc in state.retrieved_docs:
                         sources.append({
                             "title": doc.get("title", ""),
-                            "link": doc.get("link", ""),
+                            "url": doc.get("url", ""),
                             "time": doc.get("time", ""),
                             "score": doc.get("score", None),
                         })

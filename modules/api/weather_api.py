@@ -30,12 +30,20 @@ def normalize_city_name(city: str) -> str:
     return city.title()
 
 def get_weather(city: str = "Hanoi", country: str = "Việt Nam"):
+    if not OPENWEATHER_API_KEY:
+        return {"error": "Thiếu OPENWEATHER_API_KEY"}
+
     city = normalize_city_name(city)
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={city},{country}&appid={OPENWEATHER_API_KEY}&units=metric&lang=vi"
-    print("DEBUG URL", url)
-    r = requests.get(url)
-    print("DEBUG Status", r.status_code)
-    print("DEBUG Response:", r.text)
+    url = (
+        "http://api.openweathermap.org/data/2.5/weather"
+        f"?q={city},{country}&appid={OPENWEATHER_API_KEY}"
+        "&units=metric&lang=vi"
+    )
+
+    try:
+        r = requests.get(url, timeout=10)
+    except Exception as e:
+        return {"error": f"Lỗi kết nối thời tiết: {e}"}
 
     if r.status_code == 200:
         data = r.json()

@@ -1,0 +1,16 @@
+{
+  "symbol": "HPG",
+  "order": [
+    0,
+    0,
+    0
+  ],
+  "trend": "n",
+  "use_exog": false,
+  "feature_cols": [],
+  "k_exog": 0,
+  "trained_until": "2025-10-17 00:00:00",
+  "n_obs": 239,
+  "lookback_used": 238,
+  "tag": "gap"
+}
