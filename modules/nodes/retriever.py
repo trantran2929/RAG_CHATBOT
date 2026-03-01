@@ -1,10 +1,26 @@
+# modules/nodes/retriever.py
 from modules.core.state import GlobalState
 from datetime import datetime, timedelta
 import pytz
-from collections import defaultdict
-from modules.api.time_api import get_datetime_context
 
-def retrieve_documents(state: GlobalState, max_chars: int = 12000, max_hours: int = 48) -> GlobalState:
+RRF_K = 60  
+
+
+def _rrf(rank: int | None) -> float:
+    """RRF score cho 1 rank, rank bắt đầu từ 1."""
+    if not rank:
+        return 0.0
+    return 1.0 / (RRF_K + rank)
+
+
+def retrieve_documents(state: GlobalState, max_hours: int = 48) -> GlobalState:
+    """
+    NHIỆM VỤ:
+    - Nhận search_results_dense & search_results_sparse từ vector_db.
+    - Áp dụng RRF fusion:
+        rrf_score = RRF(dense_rank) + RRF(sparse_rank)
+    - Chuẩn hóa thành `state.retrieved_docs` để reranker/prompt_builder dùng.
+    """
     if getattr(state, "route_to", "") not in ["rag", "hybrid"]:
         state.retrieved_docs = []
         state.context = ""
@@ -12,108 +28,97 @@ def retrieve_documents(state: GlobalState, max_chars: int = 12000, max_hours: in
         state.add_debug("retriever", "skipped_non_rag_route")
         return state
 
-    if not state.search_results:
+    dense_hits = getattr(state, "search_results_dense", []) or []
+    sparse_hits = getattr(state, "search_results_sparse", []) or []
+
+    if not dense_hits and not sparse_hits:
         state.retrieved_docs = []
         state.context = ""
         state.llm_status = "retriever_no_docs"
         state.add_debug("retriever", "no_search_results")
         return state
 
-    vn_tz = pytz.timezone("Asia/Ho_Chi_Minh")
-    now = datetime.now(vn_tz)
-    min_ts = int((now - timedelta(hours=max_hours)).timestamp())
-    use_time_filter = bool(getattr(state, "time_filter", None))
+    fused: dict[tuple, dict] = {}
 
-    grouped = defaultdict(list)
-    for hit in state.search_results:
-        title = (hit.get("title") or "").strip()
-        time_ts = hit.get("time_ts") or 0
-        key = f"{title}_{time_ts}"
-        grouped[key].append(hit)
+    def _key(hit):
+        # key = (id, time_ts) để tránh trùng
+        return (hit.get("id"), hit.get("time_ts", 0))
 
-    merged_docs = []
-    for key, group in grouped.items():
-        best = max(group, key=lambda x: x.get("rerank_score", x.get("score", 0.0)))
-        title = best.get("title", f"Tài liệu {best.get('id', '')}").strip()
-        time_ts = best.get("time_ts") or 0
+    # Gom thông tin dense
+    for h in dense_hits:
+        k = _key(h)
+        doc = fused.get(k, {})
+        doc.update(
+            {
+                "id": h.get("id"),
+                "title": h.get("title", ""),
+                "time": h.get("time", ""),
+                "time_ts": h.get("time_ts", 0),
+                "url": h.get("url", ""),
+                "content": (h.get("content") or "").strip(),
+            }
+        )
+        doc["dense_rank"] = h.get("rank")
+        doc["dense_score"] = h.get("score", 0.0)
+        fused[k] = doc
 
-        if not use_time_filter and time_ts < min_ts:
-            continue
+    # Gom thông tin sparse
+    for h in sparse_hits:
+        k = _key(h)
+        doc = fused.get(k, {})
+        base_content = doc.get("content", "") or ""
+        # ghép nội dung sparse vào (tránh trùng lặp lớn)
+        merged_content = (base_content + " " + (h.get("content") or "")).strip()
+        doc.update(
+            {
+                "id": h.get("id"),
+                "title": h.get("title", ""),
+                "time": h.get("time", ""),
+                "time_ts": h.get("time_ts", 0),
+                "url": h.get("url", ""),
+                "content": merged_content,
+            }
+        )
+        doc["sparse_rank"] = h.get("rank")
+        doc["sparse_score"] = h.get("score", 0.0)
+        fused[k] = doc
 
-        merged_content = " ".join(
-            list(dict.fromkeys(
-                (
-                    d.get("content")
-                    or d.get("summary")
-                    or d.get("title")
-                    or ""
-                ).strip()
-                for d in group
-            ))
+    docs = []
+    for _, d in fused.items():
+        time_ts = d.get("time_ts", 0)
+
+        dense_rank = d.get("dense_rank")
+        sparse_rank = d.get("sparse_rank")
+
+        rrf_score = _rrf(dense_rank) + _rrf(sparse_rank)
+
+        docs.append(
+            {
+                "id": d.get("id"),
+                "title": d.get("title", ""),
+                "time": d.get("time", ""),
+                "time_ts": time_ts,
+                "url": d.get("url", ""),
+                "content": (d.get("content") or "")[:2500],
+                "score": round(rrf_score, 6),   # dùng RRF làm score tổng
+                "rrf_score": round(rrf_score, 6),
+                "dense_rank": dense_rank,
+                "sparse_rank": sparse_rank,
+                "dense_score": d.get("dense_score"),
+                "sparse_score": d.get("sparse_score"),
+            }
         )
 
-        merged_docs.append({
-            "id": best.get("id"),
-            "score": round(best.get("score", 0.0), 4),
-            "rerank_score": round(best.get("rerank_score", best.get("score", 0.0)), 4),
-            "title": title,
-            "time": best.get("time", ""),
-            "time_ts": time_ts,
-            "url": best.get("url", ""),
-            "content": merged_content[:2500]
-        })
+    docs.sort(key=lambda x: (x.get("rrf_score", 0.0), x.get("time_ts", 0)), reverse=True)
 
-    merged_docs.sort(
-        key=lambda x: (-(x.get("time_ts") or 0), x.get("rerank_score", -x.get("score", 0)))
-    )
-
-    if getattr(state, "intent", "") == "market":
-        market_keywords = [
-            "chứng khoán", "thị trường", "vnindex", "vn30", "vĩ mô", "dòng tiền", "ngành"
-        ]
-        filtered = [
-            d for d in merged_docs
-            if any(kw in d["content"].lower() for kw in market_keywords)
-        ]
-        if filtered:
-            merged_docs = filtered
-
-    context_parts = []
-    total_len = 0
-    min_docs = 3
-
-    for i, d in enumerate(merged_docs):
-        part = (
-            f"[{d['title']} | {d['time']}] "
-            f"(score={d['score']}, rerank={d['rerank_score']})\n"
-            f"{d['content']}"
-        )
-
-        if len(part) > max_chars * 0.5:
-            part = part[: int(max_chars * 0.5)] + "..."
-
-        context_parts.append(part)
-        total_len += len(part)
-        if total_len > max_chars and i >= min_docs - 1:
-            break
-
-    if not context_parts:
-        context_parts.append("(Không tìm thấy nội dung tin tức phù hợp.)")
-
-    context_text = "\n\n".join(context_parts).strip()
-
-    context_header = f"[Tin tức cập nhật đến: {get_datetime_context()}]\n\n"
-    context_text = context_header + context_text
-
-    state.retrieved_docs = merged_docs
-    state.context = context_text
+    state.retrieved_docs = docs
+    state.context = ""  
     state.llm_status = "retriever_success"
 
-    state.add_debug("retriever_docs", len(merged_docs))
-    state.add_debug("retriever_context_len", len(state.context))
+    state.add_debug("retriever_docs", len(docs))
     state.add_debug(
-        "retriever_titles",
-        [d["title"] for d in merged_docs[:5]]
+        "retriever_top_titles",
+        [d["title"] for d in docs[:5]],
     )
 
     return state

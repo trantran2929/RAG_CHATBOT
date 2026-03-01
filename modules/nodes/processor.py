@@ -5,8 +5,26 @@ from difflib import get_close_matches
 import pytz
 from datetime import timedelta, datetime
 from vnstock import Listing
+from unidecode import unidecode
+
+from collections import defaultdict
+from typing import List, Tuple
 
 DetectorFactory.seed = 0  # langdetect ổn định kết quả
+
+
+# Alias thủ công cho một số mã phổ biến
+MANUAL_ALIASES = {
+    "VCB": ["vietcombank", "ngan hang ngoai thuong", "ngoai thuong viet nam"],
+    "CTG": ["vietinbank", "ngan hang cong thuong"],
+    "BID": ["bidv", "ngan hang dau tu va phat trien"],
+    "TCB": ["techcombank"],
+    "MBB": ["mbbank", "quan doi"],
+    "VPB": ["vpbank"],
+    "FPT": ["fpt"],
+    "HPG": ["hoa phat"],
+    # có thể bổ sung dần
+}
 
 
 class Processor:
@@ -16,15 +34,22 @@ class Processor:
         self.stopwords = [w.lower() for w in (stopwords or [])]
         self.greetings = [
             g.lower()
-            for g in (greetings or ["hi", "hello", "chào", "chao", "chào bạn", "xin chào", "alo"])
+            for g in (
+                greetings
+                or ["hi", "hello", "chào", "chao", "chào bạn", "xin chào", "alo"]
+            )
         ]
 
+        # ====== Từ khóa nhận diện intent ======
         self.finance_keywords = [
             "cổ phiếu", "chứng khoán", "thị trường", "vnindex", "vn-index",
             "vni", "vn30", "hnx", "upcom", "vốn hóa", "doanh thu", "tăng trưởng",
             "đầu tư", "trái phiếu", "lãi suất", "cổ tức", "bitcoin", "crypto"
         ]
-        self.news = ["tin", "tin tức", "điểm nóng", "điểm nong", "đáng chú ý", "cập nhật", "diễn biến"]
+        self.news = [
+            "tin", "tin tức", "điểm nóng", "điểm nong",
+            "đáng chú ý", "cập nhật", "diễn biến"
+        ]
         self.weather_keywords = ["thời tiết", "nhiệt độ", "mưa", "nắng"]
         self.time_keywords = ["mấy giờ", "bây giờ", "hôm nay", "ngày mấy", "thứ mấy"]
         self.forecast_keywords = [
@@ -38,23 +63,102 @@ class Processor:
             "1 tháng", "3 tháng", "6 tháng", "9 tháng", "12 tháng", "1 năm",
             "ytd", "y-t-d"
         ]
-
         self.advice_keywords = [
-            "có nên mua", "mua được không", "nên mua", "có nên bán", "bán được không", "nên bán",
-            "mua hay bán", "khuyến nghị mua", "khuyến nghị bán", "lời khuyên đầu tư",
-            "gợi ý đầu tư", "mua lúc nào", "còn tăng", "còn giảm",
-            "còn lên", "còn xuống",
+            "có nên mua", "mua được không", "nên mua", "có nên bán", "bán được không",
+            "nên bán", "mua hay bán", "khuyến nghị mua", "khuyến nghị bán",
+            "lời khuyên đầu tư", "gợi ý đầu tư", "mua lúc nào", "còn tăng",
+            "còn giảm", "còn lên", "còn xuống",
         ]
 
+        # ====== Master ticker + alias index ======
+        self.valid_tickers = set()
+        self.symbol_alias_index: dict[str, set[str]] = {}
+        # alias_stop_tokens: các alias quá chung, không dùng để map mã
+        self.alias_stop_tokens: set[str] = set()
 
         try:
             listing = Listing(source="VCI")
             df = listing.all_symbols()
-            self.valid_tickers = set(df["symbol"].dropna().str.upper().tolist())
-        except Exception as e:
-            print(f"[Processor] Không thể tải danh sách mã chứng khoán ({e})")
-            self.valid_tickers = set()
 
+            if df is None or df.empty:
+                raise ValueError("Listing all_symbols() empty")
+
+            # Chuẩn hóa tên cột
+            df = df.rename(
+                columns={
+                    "symbol": "symbol",
+                    "stock_code": "symbol",
+                    "ticker": "symbol",
+                    "stock_name": "stock_name",
+                    "organName": "stock_name",
+                    "organ_name": "stock_name",
+                    "company_name": "stock_name",
+                    "companyName": "stock_name",
+                }
+            )
+
+            df["symbol"] = df["symbol"].astype(str).str.upper()
+            if "stock_name" not in df.columns:
+                df["stock_name"] = ""
+
+            self.valid_tickers = set(df["symbol"].dropna().str.upper().tolist())
+
+            alias_index: dict[str, set[str]] = {}
+
+            for _, row in df.iterrows():
+                sym = str(row["symbol"]).upper()
+                if not sym:
+                    continue
+
+                raw_name = str(row.get("stock_name") or "")
+                aliases = set()
+
+                # alias từ chính mã
+                aliases.add(self._normalize_alias(sym))
+
+                # alias từ tên công ty
+                if raw_name:
+                    aliases.add(self._normalize_alias(raw_name))
+
+                # alias thủ công (nếu có)
+                if sym in MANUAL_ALIASES:
+                    for a in MANUAL_ALIASES[sym]:
+                        aliases.add(self._normalize_alias(a))
+
+                for a in aliases:
+                    if not a:
+                        continue
+                    alias_index.setdefault(a, set()).add(sym)
+
+            self.symbol_alias_index = alias_index
+
+            # Các alias quá chung / mang nghĩa thời gian -> không dùng để map mã
+            self.alias_stop_tokens = {
+                "hom", "nay", "mai", "qua", "toi", "sang", "chieu", "dem",
+                "trua", "co", "phieu", "gia", "mua", "ban", "ngay", "thang", "nam"
+            }
+
+        except Exception as e:
+            print(f"[Processor] Không thể tải danh sách mã chứng khoán / alias ({e})")
+            self.valid_tickers = set()
+            self.symbol_alias_index = {}
+            self.alias_stop_tokens = set()
+
+    # ====== Helper cho alias ======
+    def _normalize_alias(self, s: str) -> str:
+        """
+        Dùng cho so khớp alias:
+        - lower
+        - bỏ dấu tiếng Việt
+        - bỏ khoảng trắng + ký tự không alnum
+        """
+        s = s or ""
+        s = s.lower()
+        s = unidecode(s)
+        s = re.sub(r"[^a-z0-9]+", "", s)
+        return s
+
+    # ====== Core text processing ======
     def normalize(self, text: str) -> str:
         text = unicodedata.normalize("NFC", text)
         text = re.sub(r"[^0-9a-zA-ZÀ-ỹ\s]", " ", text)
@@ -99,14 +203,62 @@ class Processor:
             return bool(match)
         return False
 
+    # ====== Resolver alias: query -> [(ticker, score)] ======
+    def resolve_tickers_with_score(
+        self, query: str, max_results: int = 5
+    ) -> List[Tuple[str, float]]:
+        """
+        Dùng alias (tên công ty, alias thủ công) để map query -> ticker.
+        Trả về list (ticker, score) đã sort theo score giảm dần.
+        """
+        if not self.symbol_alias_index:
+            return []
+
+        q = query or ""
+        q_lower = q.lower()
+
+        # tách token chữ
+        word_tokens = re.findall(r"[a-zA-ZÀ-ỹ0-9]+", q_lower)
+        n = len(word_tokens)
+        scores = defaultdict(float)
+
+        # duyệt n-gram dài trước (3 từ -> 2 từ -> 1 từ)
+        for length in [3, 2, 1]:
+            if n < length:
+                continue
+            for i in range(0, n - length + 1):
+                span = " ".join(word_tokens[i : i + length])
+                norm = self._normalize_alias(span)
+                if not norm:
+                    continue
+
+                # BỎ QUA CÁC ALIAS STOP (ví dụ: hom, nay, mai, ngay, ...)
+                if norm in self.alias_stop_tokens:
+                    continue
+
+                if norm in self.symbol_alias_index:
+                    tickers = self.symbol_alias_index[norm]
+                    weight = float(length)  # n-gram dài hơn -> trọng số cao hơn
+                    for tic in tickers:
+                        scores[tic] += weight
+
+        # build list (ticker, score) sort theo score giảm dần
+        items = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        return items[:max_results]
+
+    # ====== detect_tickers: regex + alias resolver ======
     def detect_tickers(self, text: str) -> list[str]:
         text_upper = text.upper()
-        potential = re.findall(r"\b[A-Z]{2,6}\b", text_upper)
         aliases = {"VNI": "VNINDEX", "VN-INDEX": "VNINDEX"}
 
-        invalid_tickers = {"TIN", "MUA", "BAN", "SON", "TOI", "CON", "AN", "DEP", "DO", "XANH"}
+        invalid_tickers = {
+            "TIN", "MUA", "BAN", "SON", "TOI", "CON", "AN", "DEP", "DO", "XANH"
+        }
 
-        clean_list = []
+        found = set()
+
+        # 1) Regex bắt mã in hoa (VCB, FPT,...)
+        potential = re.findall(r"\b[A-Z]{2,6}\b", text_upper)
         for t in potential:
             t = aliases.get(t, t.strip().upper())
             if (
@@ -115,9 +267,10 @@ class Processor:
                 and (t in self.valid_tickers or t in self.market_indices)
                 and t not in invalid_tickers
             ):
-                clean_list.append(t)
+                found.add(t)
 
-        if not clean_list:
+        # 2) Trường hợp 'cổ phiếu VCB', 'mã FPT'
+        if not found:
             match = re.findall(r"(?:cổ phiếu|mã)\s+([A-Z]{2,6})", text_upper)
             for t in match:
                 t = t.strip().upper()
@@ -126,10 +279,17 @@ class Processor:
                     and (t in self.valid_tickers or t in self.market_indices)
                     and t not in invalid_tickers
                 ):
-                    clean_list.append(t)
+                    found.add(t)
 
-        return sorted(set(clean_list))
+        # 3) Dùng alias resolver: 'vietcombank', 'hoa phat', 'mbbank'...
+        alias_results = self.resolve_tickers_with_score(text, max_results=5)
+        for tic, score in alias_results:
+            if tic not in invalid_tickers:
+                found.add(tic)
 
+        return sorted(found)
+
+    # ====== Detect intent ======
     def detect_intent(self, query: str) -> str:
         q = query.lower()
         tickers = self.detect_tickers(query)
@@ -139,61 +299,52 @@ class Processor:
         ]
 
         # 1. Hỏi tin tức / diễn biến / cập nhật về 1 mã cụ thể
-        #    ví dụ: "Hôm nay có tin tức gì mới về VCB?",
-        #           "VCB có diễn biến gì đáng chú ý?"
-        # → Đây không chỉ là hỏi giá, mà là hỏi bối cảnh + news.
-        # → Trả về "market" để router dùng nhánh HYBRID (api + rag).
         if tickers and any(k in q for k in self.news):
             return "market"
 
         # 2. Hỏi tin tức chung chung (không ticker)
-        #    ví dụ: "có tin gì nóng không", "cập nhật thị trường hôm nay"
-        # → Thuần RAG.
         if any(k in q for k in self.news):
             return "rag"
 
-        # 3. Hỏi lời khuyên mua/bán, khuyến nghị, còn lên/giảm,...
-        #    (có ticker) → market (để phân tích broader context)
+        # 3. Hỏi lời khuyên mua/bán
         if tickers and any(k in q for k in self.advice_keywords):
             return "market"
 
-        # 4. Dự báo / dự đoán / forecast
+        # 4. Dự báo / forecast
         if any(k in q for k in self.forecast_keywords):
             return "forecast"
 
-        # 5. Các câu phân tích xu hướng thị trường, dòng tiền, khối ngoại...
-        #    Nếu có ticker là index (VNINDEX, VN30...) và họ hỏi về giá %, thì coi như "stock"
-        #    Nếu không, thì "market".
-        if any(k in q for k in ["phân tích", "xu hướng", "thị trường", "nhận định", "biến động", "dòng tiền", "khối ngoại"]):
+        # 5. Phân tích xu hướng thị trường / dòng tiền...
+        if any(
+            k in q
+            for k in [
+                "phân tích", "xu hướng", "thị trường", "nhận định",
+                "biến động", "dòng tiền", "khối ngoại"
+            ]
+        ):
             if tickers and any(t in self.market_indices for t in tickers):
                 if any(k in q for k in asking_price_keywords):
                     return "stock"
             return "market"
 
-        # 6. User nhắc tới ticker cụ thể
+        # 6. Có ticker cụ thể
         if tickers:
-            # Nếu ticker là index như VNINDEX/VN30/HNX...
+            # ticker là index
             if any(t in self.market_indices for t in tickers):
-                # hỏi giá/phần trăm? -> stock
                 if any(k in q for k in asking_price_keywords):
                     return "stock"
-                # nếu không hỏi giá cụ thể -> market (bối cảnh vĩ mô)
                 return "market"
 
-            # ticker là mã cổ phiếu (VCB, FPT,...)
-            # Nếu câu hỏi là giá / biến động / phần trăm -> stock (lấy quote trực tiếp)
+            # ticker là cổ phiếu: hỏi giá / % -> stock, còn lại -> market
             if any(k in q for k in asking_price_keywords):
                 return "stock"
-
-            # còn lại (ví dụ: "VCB dạo này sao", "đánh giá VCB")
-            # -> market để cho phép hybrid phân tích bối cảnh thay vì chỉ trả giá
             return "market"
 
-        # 7. Nếu không có ticker nhưng có từ khóa tài chính chung
+        # 7. Không ticker nhưng có từ khóa tài chính
         if any(k in q for k in self.finance_keywords):
             return "market"
 
-        # 8. Weather/time
+        # 8. Weather / time
         if any(k in q for k in self.weather_keywords):
             return "weather"
         if any(k in q for k in self.time_keywords):
@@ -202,26 +353,30 @@ class Processor:
         # 9. fallback
         return "rag"
 
-
+    # ====== Time filter & history ======
     def detect_time_filter(self, query: str):
         vn_tz = pytz.timezone("Asia/Ho_Chi_Minh")
         now = datetime.now(vn_tz)
 
-        today_start = vn_tz.localize(datetime(now.year, now.month, now.day, 0, 0, 0))
-        today_end   = vn_tz.localize(datetime(now.year, now.month, now.day, 23, 59, 59))
+        today_start = vn_tz.localize(
+            datetime(now.year, now.month, now.day, 0, 0, 0)
+        )
+        today_end = vn_tz.localize(
+            datetime(now.year, now.month, now.day, 23, 59, 59)
+        )
 
         yesterday_start = today_start - timedelta(days=1)
-        yesterday_end   = today_end - timedelta(days=1)
+        yesterday_end = today_end - timedelta(days=1)
 
         tomorrow_start = today_start + timedelta(days=1)
-        tomorrow_end   = today_end + timedelta(days=1)
+        tomorrow_end = today_end + timedelta(days=1)
 
         last_week_start = today_start - timedelta(days=7)
-        next_week_end   = today_end + timedelta(days=7)
+        next_week_end = today_end + timedelta(days=7)
 
         q = query.lower()
 
-        if "hôm nay" in q:
+        if "hôm nay" in q or "trong ngày" in q or "trong phiên" in q:
             return (int(today_start.timestamp()), int(today_end.timestamp()))
         elif "hôm qua" in q:
             return (int(yesterday_start.timestamp()), int(yesterday_end.timestamp()))
@@ -237,8 +392,12 @@ class Processor:
             day, month, year = int(match.group(1)), int(match.group(2)), match.group(3)
             year = int(year) if year else now.year
             try:
-                dt_start = vn_tz.localize(datetime(year, month, day, 0, 0, 0))
-                dt_end = vn_tz.localize(datetime(year, month, day, 23, 59, 59))
+                dt_start = vn_tz.localize(
+                    datetime(year, month, day, 0, 0, 0)
+                )
+                dt_end = vn_tz.localize(
+                    datetime(year, month, day, 23, 59, 59)
+                )
                 return (int(dt_start.timestamp()), int(dt_end.timestamp()))
             except Exception:
                 pass
@@ -285,7 +444,9 @@ class Processor:
 
         return default_days
 
-    def resolve_history_request(self, text: str, time_filter: tuple | None, default_days: int = 30) -> tuple[bool, int | None]:
+    def resolve_history_request(
+        self, text: str, time_filter: tuple | None, default_days: int = 30
+    ) -> tuple[bool, int | None]:
         q = (text or "").lower().strip()
 
         if "hôm nay" in q:
@@ -312,6 +473,7 @@ class Processor:
 
         return (False, None)
 
+    # ====== Entry point ======
     def process_query(self, state, vocab: list = None):
         user_query = state.user_query
         processed_query = self.normalize(user_query)
@@ -339,7 +501,7 @@ class Processor:
         # cache_key gợi ý: bản query chuẩn hóa
         state.cache_key = f"qa::{processed_query[:100]}"
 
-        # thêm debug tiện theo dõi
+        # debug
         if getattr(state, "add_debug", None):
             state.add_debug("processor_intent", state.intent)
             state.add_debug("processor_tickers", state.tickers)
@@ -350,6 +512,7 @@ class Processor:
 
 
 processor_instance = Processor()
+
 
 def processor_query(state, vocab: list = None):
     return processor_instance.process_query(state, vocab)

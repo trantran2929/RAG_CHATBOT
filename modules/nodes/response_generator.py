@@ -88,7 +88,7 @@ def response_node(state: GlobalState, max_history: int = 50) -> GlobalState:
         assistant_msg = re.sub(r"```[\s\S]*?```", "", text)
         assistant_msg = re.sub(r"http\S+", "(link)", assistant_msg)
         assistant_msg = re.sub(
-            r"^(Assistant:|User:|Trợ lý:|Người dùng:)\s*",
+            r"^\s*\**\s*(Assistant|User|Trợ lý|Người dùng)\s*\**\s*:\s*",
             "",
             assistant_msg,
             flags=re.I

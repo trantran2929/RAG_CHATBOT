@@ -25,5 +25,6 @@ IPython
 sentence_transformers
 flask
 statsmodels
+unidecode
 
 # pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128

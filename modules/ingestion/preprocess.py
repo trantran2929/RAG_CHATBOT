@@ -74,9 +74,12 @@ def clean_text(text: str) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
-def chunk_text(text: str, max_words: int = 220, overlap: float = 0.01) -> List[str]:
+def chunk_text(text: str, max_words: int = 400, overlap: float = 0.15) -> List[str]:
     """
-    Sliding window theo từ: max_words, overlap rất nhỏ.
+    Sliding window theo từ:
+    - Mỗi chunk tối đa ~max_words từ (mặc định ~400 từ).
+    - overlap = 0.15 -> các cửa sổ chồng lấn ~15%.
+    - Hàm chỉ trả về list chunk, KHÔNG trả thông tin overlap ra ngoài.
     """
     words = (text or "").split()
     if not words:
@@ -130,7 +133,7 @@ def _to_time_ts(time_str: str) -> int:
     except Exception:
         return int(pd.Timestamp.utcnow().timestamp())
 
-def preprocess_articles(articles: List[Dict], max_words: int = 220) -> List[Dict]:
+def preprocess_articles(articles: List[Dict], max_words: int = 400) -> List[Dict]:
     """
     Trả về list docs cho loader:
       id, title, url, content, summary, source, symbols(List[str]), index_codes(List[str]),
@@ -151,7 +154,7 @@ def preprocess_articles(articles: List[Dict], max_words: int = 220) -> List[Dict
         symbols = _extract_symbols(title, clean, universe)
         index_codes = _extract_index_codes(" ".join([title, summary, content]))
 
-        chunks = chunk_text(clean, max_words=max_words, overlap=0.001)
+        chunks = chunk_text(clean, max_words=max_words, overlap=0.15)
         if not chunks:
             continue
         for idx, ch in enumerate(chunks):

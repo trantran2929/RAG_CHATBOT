@@ -98,7 +98,7 @@ def run_scheduler():
             print(f"[Ingestion] Crawl được {len(raw_articles)} bài gốc")
 
             # 2) Tiền xử lý → chunk docs với schema cố định
-            chunked_docs = preprocess_articles(raw_articles, max_words=220)
+            chunked_docs = preprocess_articles(raw_articles, max_words=400)
             print(f"[Ingestion] Tách thành {len(chunked_docs)} chunk docs")
 
             if not chunked_docs:

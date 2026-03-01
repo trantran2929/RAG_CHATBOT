@@ -36,6 +36,9 @@ class GlobalState:
     query_embedding: Optional[Dict[str, Any]] = None
     # Kết quả tìm kiếm trong vector DB (ID + score)
     search_results: List[Dict[str, Any]] = field(default_factory=list)
+
+    search_results_dense: List[Dict[str, Any]] = field(default_factory=list)
+    search_results_sparse: List[Dict[str, Any]] = field(default_factory=list)
     # Docs thực tế được lấy từ retriever
     retrieved_docs: List[Dict[str, Any]] = field(default_factory=list)
     # Context được tổng hợp (snippets gộp lại)

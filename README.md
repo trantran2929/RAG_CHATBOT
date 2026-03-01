@@ -62,6 +62,7 @@ rag_project/ <br>
 │   │   ├── cache.py                    <br>
 │   │   ├── processor.py                <br>
 │   │   ├── embedder.py <br>
+│   │   ├── reranker.py <br>
 │   │   ├── vector_db.py    <br>
 │   │   ├── retriever.py    <br>
 │   │   ├── prompt_builder.py   <br>

@@ -41,10 +41,10 @@ def get_datetime_context()->str:
     now = get_now()
     return (
         f"Hôm nay là {format_full(now)}.\n"
-        f"Ngày hôm qua là {format_date(add_time(now, -1, 'ngày'))}.\n"
-        f"Ngày mai là {format_date(add_time(now, 1, 'ngày'))}.\n"
-        f"Tuần sau sẽ bắt đầu từ {format_date(add_time(now, 7, 'ngày'))}.\n"
-        f"Tuần trước bắt đầu từ {format_date(add_time(now, -7, 'ngày'))}."
+        # f"Ngày hôm qua là {format_date(add_time(now, -1, 'ngày'))}.\n"
+        # f"Ngày mai là {format_date(add_time(now, 1, 'ngày'))}.\n"
+        # f"Tuần sau sẽ bắt đầu từ {format_date(add_time(now, 7, 'ngày'))}.\n"
+        # f"Tuần trước bắt đầu từ {format_date(add_time(now, -7, 'ngày'))}."
     )
 
 def get_current_time() -> str:

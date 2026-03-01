@@ -9,6 +9,7 @@ from modules.nodes.prompt_builder import build_prompt
 from modules.nodes.response_generator import response_node
 # from modules.utils.debug import debug_summary_node
 from modules.nodes.router import route_intent
+from modules.nodes.reranker import rerank_documents
 
 def build_graph():
     workflow = StateGraph(GlobalState)
@@ -18,6 +19,7 @@ def build_graph():
     workflow.add_node("router", route_intent)
     workflow.add_node("embedder", embed_query)
     workflow.add_node("vector_db", search_vector_db)
+    workflow.add_node("reranker", rerank_documents)
     workflow.add_node("retriever", retrieve_documents)
     workflow.add_node("prompt_builder", build_prompt)
     workflow.add_node("response_node", response_node)
@@ -38,7 +40,8 @@ def build_graph():
     )
     workflow.add_edge("embedder", "vector_db")
     workflow.add_edge("vector_db", "retriever")
-    workflow.add_edge("retriever", "prompt_builder")
+    workflow.add_edge("retriever", "reranker")              
+    workflow.add_edge("reranker", "prompt_builder")          
     workflow.add_edge("prompt_builder", "response_node")
     # workflow.add_edge("response_node", "debug_summary")
     workflow.add_edge("response_node", "save_cache")

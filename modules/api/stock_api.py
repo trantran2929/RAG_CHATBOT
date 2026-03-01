@@ -2,7 +2,7 @@
 VNStock Data API (ICT timezone, TTL cache, robust normalize)
 - discover_market_indices, get_index_detail
 - get_stock_quote, get_top_stocks
-- get_history_prices
+- get_history_prices, get_price_at_date
 - get_history_df_vnstock, get_prices_df, get_close_series
 - get_intraday_df  (ticks → OHLCV)
 - format_* helpers (text output)
@@ -10,41 +10,46 @@ VNStock Data API (ICT timezone, TTL cache, robust normalize)
 
 from __future__ import annotations
 import warnings
+
 warnings.filterwarnings("ignore", category=UserWarning, module="vnai.scope.profile")
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from functools import wraps
 from typing import Optional, Iterable, List, Dict
-import time, re
+import time
+import re
 
 import numpy as np
 import pandas as pd
 import pytz
 
 from vnstock import Quote, Trading, Screener
-from modules.api.time_api import get_now  # tz-aware ICT
+from modules.api.time_api import get_now
 
-# ========= Time config (ICT)
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 DATE_FMT = "%d-%m-%Y"
 DATETIME_FMT = "%d-%m-%Y %H:%M:%S"
 MIN_YEAR = 2005
 
+
 def get_time_vn() -> str:
     return get_now().strftime(DATETIME_FMT)
 
+
 def _today_vn() -> datetime:
-    return get_now()  # tz-aware ICT
+    return get_now()
+
 
 def _ymd(dt_: datetime) -> str:
     if dt_.tzinfo:
         dt_ = dt_.astimezone(VN_TZ)
     return dt_.strftime("%Y-%m-%d")
 
-# ========= TTL Cache decorator
+
 def TTLCache(ttl_seconds: int = 300, verbose: bool = False):
     def decorator(func):
         cache: Dict[tuple, tuple] = {}
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             key = (func.__name__, args, frozenset(kwargs.items()))
@@ -61,27 +66,30 @@ def TTLCache(ttl_seconds: int = 300, verbose: bool = False):
             val = func(*args, **kwargs)
             cache[key] = (val, t)
             return val
+
         return wrapper
+
     return decorator
 
-# ========= Symbol helpers
+
 def _sanitize_symbol(symbol: str) -> str:
     s = (symbol or "").strip().upper()
     return re.sub(r"[^A-Z0-9]", "", s)
+
 
 def _validate_symbol(symbol: str):
     if not (3 <= len(symbol) <= 10):
         raise ValueError(f"Symbol không hợp lệ sau sanitize: {repr(symbol)}")
 
-# ========= Daily normalize
+
 def _normalize_history_df(df: pd.DataFrame) -> pd.DataFrame:
     if df is None or df.empty:
-        return pd.DataFrame(columns=["open","high","low","close","volume"])
+        return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
 
     df = df.copy()
     df.columns = [str(c).lower() for c in df.columns]
 
-    time_col = next((c for c in ("time","date","tradingdate") if c in df.columns), None)
+    time_col = next((c for c in ("time", "date", "tradingdate") if c in df.columns), None)
 
     if time_col:
         s = df[time_col]
@@ -90,22 +98,23 @@ def _normalize_history_df(df: pd.DataFrame) -> pd.DataFrame:
             unit = "ms" if (s_num.max() or 0) > 1e12 else "s"
             idx = (
                 pd.to_datetime(s_num, unit=unit, utc=True)
-                .dt.tz_convert(VN_TZ).dt.tz_localize(None)
+                .dt.tz_convert(VN_TZ)
+                .dt.tz_localize(None)
             )
         else:
             idx = pd.to_datetime(s, errors="coerce")
         df = (
             df.assign(_dt=idx)
-              .dropna(subset=["_dt"])
-              .drop(columns=[time_col])
-              .set_index("_dt")
+            .dropna(subset=["_dt"])
+            .drop(columns=[time_col])
+            .set_index("_dt")
         )
     else:
         idx = pd.to_datetime(df.index, errors="coerce")
         df.index = idx
         df = df[~df.index.isna()]
 
-    for col in ("open","high","low","close","volume"):
+    for col in ("open", "high", "low", "close", "volume"):
         if col not in df.columns:
             alt = next((k for k in df.columns if str(k).lower().startswith(col)), None)
             df[col] = pd.to_numeric(df.get(alt, np.nan), errors="coerce")
@@ -115,11 +124,11 @@ def _normalize_history_df(df: pd.DataFrame) -> pd.DataFrame:
     today_ict = _today_vn().date()
     df = df[(df.index.year >= MIN_YEAR) & (df.index.date <= today_ict)]
     df = df.sort_index().dropna(subset=["close"])
-    return df[["open","high","low","close","volume"]]
+    return df[["open", "high", "low", "close", "volume"]]
 
-# ========= Quote history fallback
+
 def _quote_history_with_fallback(symbol: str, start: str, end: str) -> pd.DataFrame:
-    for src in ("VCI","TCBS","MSN"):
+    for src in ("VCI", "TCBS", "MSN"):
         try:
             q = Quote(symbol=symbol, source=src)
             raw = q.history(start=start, end=end)
@@ -130,21 +139,33 @@ def _quote_history_with_fallback(symbol: str, start: str, end: str) -> pd.DataFr
             continue
     raise ValueError(f"Không lấy được lịch sử cho {symbol} từ VCI/TCBS/MSN")
 
-# ========= Indices
+
 _CANDIDATE_INDICES: List[str] = [
-    "VNINDEX","VN30","VN100","VNALL","VNMID","VNSML",
-    "HNX","HNX30","UPCOM","UPCOM10",
-    "VNFINLEAD","VNFINSELECT","VNDIAMOND","VN30TR",
+    "VNINDEX",
+    "VN30",
+    "VN100",
+    "VNALL",
+    "VNMID",
+    "VNSML",
+    "HNX",
+    "HNX30",
+    "UPCOM",
+    "UPCOM10",
+    "VNFINLEAD",
+    "VNFINSELECT",
+    "VNDIAMOND",
+    "VN30TR",
 ]
 
-@TTLCache(ttl_seconds=6*3600)
+
+@TTLCache(ttl_seconds=6 * 3600)
 def discover_market_indices(
-    candidates: Iterable[str] | None = None,
-    min_points: int = 1
+    candidates: Iterable[str] | None = None, min_points: int = 1
 ) -> List[str]:
     idxs = list(candidates or _CANDIDATE_INDICES)
     ok: List[str] = []
-    end = _today_vn(); start = end - timedelta(days=7)
+    end = _today_vn()
+    start = end - timedelta(days=7)
     for code in idxs:
         try:
             df = _quote_history_with_fallback(code, _ymd(start), _ymd(end))
@@ -152,22 +173,25 @@ def discover_market_indices(
                 ok.append(code)
         except Exception:
             pass
-    prio = {c:i for i,c in enumerate(_CANDIDATE_INDICES)}
+    prio = {c: i for i, c in enumerate(_CANDIDATE_INDICES)}
     ok.sort(key=lambda x: prio.get(x, 999))
     return ok
 
-# ========= Index detail
+
 @TTLCache(ttl_seconds=300)
 def get_index_detail(index_code: str = "VNINDEX") -> dict:
     try:
-        index_code = _sanitize_symbol(index_code); _validate_symbol(index_code)
-        end = _today_vn(); start = end - timedelta(days=7)
+        index_code = _sanitize_symbol(index_code)
+        _validate_symbol(index_code)
+        end = _today_vn()
+        start = end - timedelta(days=7)
         df = _quote_history_with_fallback(index_code, _ymd(start), _ymd(end))
         if df is None or df.empty:
             raise ValueError("Không có dữ liệu chỉ số.")
-        last = df.iloc[-1]; prev = df.iloc[-2] if len(df)>1 else last
+        last = df.iloc[-1]
+        prev = df.iloc[-2] if len(df) > 1 else last
         change = float(last["close"]) - float(prev["close"])
-        pct = (change/float(prev["close"])*100) if float(prev["close"]) else 0.0
+        pct = (change / float(prev["close"]) * 100) if float(prev["close"]) else 0.0
         return {
             "ticker": index_code.upper(),
             "price": round(float(last["close"]), 2),
@@ -175,7 +199,7 @@ def get_index_detail(index_code: str = "VNINDEX") -> dict:
             "percent_change": round(pct, 2),
             "open": round(float(last.get("open", 0) or 0), 2),
             "high": round(float(last.get("high", 0) or 0), 2),
-            "low":  round(float(last.get("low", 0) or 0), 2),
+            "low": round(float(last.get("low", 0) or 0), 2),
             "volume": int(last.get("volume", 0) or 0),
             "timestamp": get_time_vn(),
             "source": "VNStock",
@@ -184,7 +208,7 @@ def get_index_detail(index_code: str = "VNINDEX") -> dict:
         print(f"[VNStock] Lỗi chỉ số {index_code}: {e}")
         return {"ticker": index_code, "error": str(e)}
 
-# ========= Stock quote (snapshot + fallback)
+
 @TTLCache(ttl_seconds=60)
 def get_stock_quote(symbol: str) -> dict:
     """
@@ -201,7 +225,8 @@ def get_stock_quote(symbol: str) -> dict:
 
     def _get_recent_market_date(sym: str) -> Optional[str]:
         try:
-            end_ = _today_vn(); start_ = end_ - timedelta(days=7)
+            end_ = _today_vn()
+            start_ = end_ - timedelta(days=7)
             hist_df = _quote_history_with_fallback(sym, _ymd(start_), _ymd(end_))
             if hist_df is None or hist_df.empty:
                 return None
@@ -209,7 +234,9 @@ def get_stock_quote(symbol: str) -> dict:
             if isinstance(last_idx, (pd.Timestamp, datetime)):
                 return last_idx.strftime(DATE_FMT)
             try:
-                return datetime.strptime(str(last_idx)[:10], "%Y-%m-%d").strftime(DATE_FMT)
+                return datetime.strptime(str(last_idx)[:10], "%Y-%m-%d").strftime(
+                    DATE_FMT
+                )
             except Exception:
                 return str(last_idx)
         except Exception:
@@ -221,14 +248,14 @@ def get_stock_quote(symbol: str) -> dict:
         df = trading.price_board(symbols_list=[symbol])
         if df is None or df.empty:
             raise ValueError("Không có dữ liệu cổ phiếu.")
-        df.columns = [f"{a}_{b}" for a,b in df.columns]
+        df.columns = [f"{a}_{b}" for a, b in df.columns]
         row = df.iloc[0].to_dict()
 
         price = row.get("match_match_price")
-        ref   = row.get("match_reference_price") or row.get("listing_ref_price")
-        ceil  = row.get("match_ceiling_price")   or row.get("listing_ceiling")
-        floor = row.get("match_floor_price")     or row.get("listing_floor")
-        vol   = (
+        ref = row.get("match_reference_price") or row.get("listing_ref_price")
+        ceil = row.get("match_ceiling_price") or row.get("listing_ceiling")
+        floor = row.get("match_floor_price") or row.get("listing_floor")
+        vol = (
             row.get("match_accumulated_volume")
             or row.get("match_match_vol")
             or 0
@@ -238,7 +265,7 @@ def get_stock_quote(symbol: str) -> dict:
             raise ValueError("match_price = 0")
 
         chg = float(price) - float(ref) if ref else 0.0
-        pct = (chg/float(ref)*100) if ref else 0.0
+        pct = (chg / float(ref) * 100) if ref else 0.0
 
         market_date_str = _get_recent_market_date(symbol)
 
@@ -247,12 +274,12 @@ def get_stock_quote(symbol: str) -> dict:
             "price": float(price),
             "open": float(ref) if ref is not None else None,
             "high": float(ceil) if ceil is not None else None,
-            "low":  float(floor) if floor is not None else None,
-            "change": round(chg,2),
-            "percent_change": round(pct,2),
+            "low": float(floor) if floor is not None else None,
+            "change": round(chg, 2),
+            "percent_change": round(pct, 2),
             "volume": int(vol or 0),
-            "timestamp": get_time_vn(),   # lúc query
-            "market_date": market_date_str,  # ngày giao dịch thực sự
+            "timestamp": get_time_vn(),
+            "market_date": market_date_str,
             "source": "VNStock.Trading",
             "fallback": False,
         }
@@ -262,14 +289,15 @@ def get_stock_quote(symbol: str) -> dict:
 
         # 2. Fallback dùng lịch sử
         try:
-            end = _today_vn(); start = end - timedelta(days=7)
+            end = _today_vn()
+            start = end - timedelta(days=7)
             df = _quote_history_with_fallback(symbol, _ymd(start), _ymd(end))
             if df is not None and not df.empty:
                 last = df.iloc[-1]
-                op = float(last.get("open",0) or 0)
-                cl = float(last.get("close",0) or 0)
+                op = float(last.get("open", 0) or 0)
+                cl = float(last.get("close", 0) or 0)
                 chg = cl - op
-                pct = (chg/op*100) if op else 0.0
+                pct = (chg / op * 100) if op else 0.0
                 try:
                     idx_val = str(last.name)
                     fb_date = datetime.strptime(
@@ -281,11 +309,11 @@ def get_stock_quote(symbol: str) -> dict:
                     "symbol": symbol,
                     "price": cl or None,
                     "open": op or None,
-                    "high": float(last.get("high",0) or 0),
-                    "low":  float(last.get("low",0) or 0),
-                    "change": round(chg,2),
-                    "percent_change": round(pct,2),
-                    "volume": int(last.get("volume",0) or 0),
+                    "high": float(last.get("high", 0) or 0),
+                    "low": float(last.get("low", 0) or 0),
+                    "change": round(chg, 2),
+                    "percent_change": round(pct, 2),
+                    "volume": int(last.get("volume", 0) or 0),
                     "timestamp": get_time_vn(),
                     "fallback": True,
                     "fallback_date": fb_date,
@@ -297,41 +325,48 @@ def get_stock_quote(symbol: str) -> dict:
 
         return {"symbol": symbol, "price": None, "error": "Không có dữ liệu giao dịch gần đây."}
 
-# ========= Top movers
+
 @TTLCache(ttl_seconds=300)
 def get_top_stocks(limit: int = 10, direction: str = "up") -> list:
     """
     direction: "up" lấy top tăng %, "down" lấy top giảm % (âm nhiều nhất).
     """
     try:
-        screener_df = Screener().stock(params={"exchangeName":"HOSE,HNX,UPCOM"}, limit=3000)
+        screener_df = Screener().stock(
+            params={"exchangeName": "HOSE,HNX,UPCOM"}, limit=3000
+        )
         if screener_df is None or screener_df.empty:
             raise ValueError("Không có dữ liệu sàng lọc.")
-        growth_col = next((c for c in screener_df.columns if "growth" in c.lower()), None)
+        growth_col = next(
+            (c for c in screener_df.columns if "growth" in c.lower()), None
+        )
         if not growth_col:
             raise ValueError("Không tìm thấy cột tăng trưởng giá.")
-        screener_df[growth_col] = pd.to_numeric(
-            screener_df[growth_col],
-            errors="coerce"
-        ).astype(float)
+        screener_df[growth_col] = (
+            pd.to_numeric(screener_df[growth_col], errors="coerce")
+            .astype(float)
+        )
 
         ascending = True if direction == "down" else False
         top_df = screener_df.sort_values(growth_col, ascending=ascending).head(limit)
 
         out = []
         for _, row in top_df.iterrows():
-            out.append({
-                "symbol": (row.get("ticker") or row.get("symbol") or "").upper(),
-                "exchange": row.get("exchange","") or "",
-                "price": row.get("price_near_realtime") or row.get("close_price"),
-                "pct_change": round(float(row[growth_col] or 0.0), 2),
-                "volume": int(row.get("avg_trading_value_10d", 0) or 0),
-                "timestamp": get_time_vn(),
-            })
+            out.append(
+                {
+                    "symbol": (row.get("ticker") or row.get("symbol") or "").upper(),
+                    "exchange": row.get("exchange", "") or "",
+                    "price": row.get("price_near_realtime") or row.get("close_price"),
+                    "pct_change": round(float(row[growth_col] or 0.0), 2),
+                    "volume": int(row.get("avg_trading_value_10d", 0) or 0),
+                    "timestamp": get_time_vn(),
+                }
+            )
         return out
     except Exception as e:
         print(f"[VNStock] Lỗi top movers: {e}")
         return []
+
 
 def format_top_stocks(direction: str = "up", limit: int = 5) -> str:
     arr = get_top_stocks(limit=limit, direction=direction)
@@ -342,18 +377,19 @@ def format_top_stocks(direction: str = "up", limit: int = 5) -> str:
     header_emoji = "🚀 Top tăng mạnh" if direction == "up" else "⚠️ Top giảm mạnh"
     lines = [header_emoji + ":"]
     for item in arr:
-        sym = item.get("symbol","?")
+        sym = item.get("symbol", "?")
         px = item.get("price", None)
         pct = item.get("pct_change", 0.0)
         vol = item.get("volume", 0)
-        lines.append(
-            f"- {sym}: {px} ({pct:+.2f}%), GTGD~{vol:,}"
-        )
+        lines.append(f"- {sym}: {px} ({pct:+.2f}%), GTGD~{vol:,}")
     return "\n".join(lines)
 
-# ========= History (dict)
+
 @TTLCache(ttl_seconds=300)
 def get_history_prices(symbol: str, days: int = 7) -> dict:
+    """
+    Lấy lịch sử giá khoảng N phiên gần nhất (không phải đúng N ngày lịch).
+    """
     symbol = _sanitize_symbol(symbol)
     try:
         _validate_symbol(symbol)
@@ -361,35 +397,44 @@ def get_history_prices(symbol: str, days: int = 7) -> dict:
         return {"symbol": symbol, "error": str(ve)}
 
     try:
-        end = _today_vn(); start = end - timedelta(days=days+14)
+        end = _today_vn()
+        start = end - timedelta(days=days + 14)
         df = _quote_history_with_fallback(symbol, _ymd(start), _ymd(end))
         if df is None or df.empty:
             raise ValueError("Không có dữ liệu lịch sử.")
 
         df["change"] = df["close"].diff()
         df["pct_change"] = df["close"].pct_change() * 100
-        df = df.dropna()
+
+        # Không dropna để không mất phiên đầu; fill NaN = 0.0
+        df["change"] = df["change"].fillna(0.0)
+        df["pct_change"] = df["pct_change"].fillna(0.0)
+
+        tail = df.tail(days) if len(df) > days else df
 
         recs = []
-        tail = df.tail(days) if len(df)>days else df
-        for idx,row in tail.iterrows():
-            if isinstance(idx,(pd.Timestamp,datetime)):
+        for idx, row in tail.iterrows():
+            if isinstance(idx, (pd.Timestamp, datetime)):
                 trade_date = idx.strftime(DATE_FMT)
             else:
                 try:
-                    trade_date = datetime.strptime(str(idx)[:10], "%Y-%m-%d").strftime(DATE_FMT)
+                    trade_date = datetime.strptime(
+                        str(idx)[:10], "%Y-%m-%d"
+                    ).strftime(DATE_FMT)
                 except Exception:
                     trade_date = str(idx)
-            recs.append({
-                "date": trade_date,
-                "open": float(row.get("open",0) or 0),
-                "high": float(row.get("high",0) or 0),
-                "low":  float(row.get("low",0) or 0),
-                "close":float(row.get("close",0) or 0),
-                "volume": int(row.get("volume",0) or 0),
-                "change": round(float(row.get("change",0) or 0),2),
-                "pct_change": round(float(row.get("pct_change",0) or 0),2),
-            })
+            recs.append(
+                {
+                    "date": trade_date,
+                    "open": float(row.get("open", 0) or 0),
+                    "high": float(row.get("high", 0) or 0),
+                    "low": float(row.get("low", 0) or 0),
+                    "close": float(row.get("close", 0) or 0),
+                    "volume": int(row.get("volume", 0) or 0),
+                    "change": round(float(row.get("change", 0) or 0), 2),
+                    "pct_change": round(float(row.get("pct_change", 0) or 0), 2),
+                }
+            )
         return {
             "symbol": symbol,
             "history": recs,
@@ -401,7 +446,76 @@ def get_history_prices(symbol: str, days: int = 7) -> dict:
         print(f"[VNStock] Lỗi lịch sử {symbol}: {e}")
         return {"symbol": symbol, "error": str(e)}
 
-# --- tz helper
+
+@TTLCache(ttl_seconds=300)
+def get_price_at_date(
+    symbol: str,
+    target_date: date,
+    window_days: int = 10,
+) -> dict:
+    """
+    Lấy giá (OHLCV) của 1 mã quanh một ngày cụ thể.
+    - Ưu tiên đúng ngày target_date.
+    - Nếu ngày đó nghỉ/không giao dịch: lấy phiên gần nhất <= target_date.
+    - Nếu toàn bộ dữ liệu > target_date: lấy phiên đầu tiên (gần nhất sau đó).
+    """
+    sym = _sanitize_symbol(symbol)
+    try:
+        _validate_symbol(sym)
+    except ValueError as ve:
+        return {"symbol": sym, "error": str(ve)}
+
+    if not isinstance(target_date, date):
+        return {"symbol": sym, "error": "target_date phải là datetime.date"}
+
+    # Lấy 1 khoảng xung quanh target_date để chắc ăn
+    target_dt = datetime.combine(target_date, datetime.min.time())
+    target_dt = VN_TZ.localize(target_dt)
+    start_dt = target_dt - timedelta(days=window_days)
+    end_dt = target_dt + timedelta(days=window_days)
+
+    try:
+        df = _quote_history_with_fallback(sym, _ymd(start_dt), _ymd(end_dt))
+        df = _normalize_history_df(df)
+        if df is None or df.empty:
+            raise ValueError("Không có dữ liệu lịch sử quanh ngày yêu cầu.")
+    except Exception as e:
+        print(f"[VNStock] Lỗi get_price_at_date {sym}: {e}")
+        return {"symbol": sym, "error": str(e)}
+
+    d = target_date
+    dates = np.array([idx.date() for idx in df.index])
+
+    # 1) đúng ngày
+    mask_exact = (dates == d)
+    row = None
+    used_date = None
+    if mask_exact.any():
+        row = df.iloc[np.where(mask_exact)[0][-1]]
+        used_date = d
+    else:
+        # 2) phiên gần nhất trước hoặc bằng ngày target
+        mask_before = (dates <= d)
+        if mask_before.any():
+            idx_last_before = np.where(mask_before)[0][-1]
+            row = df.iloc[idx_last_before]
+            used_date = df.index[idx_last_before].date()
+        else:
+            # 3) tất cả phiên đều sau target -> lấy phiên đầu tiên
+            row = df.iloc[0]
+            used_date = df.index[0].date()
+
+    return {
+        "symbol": sym,
+        "date": used_date.strftime(DATE_FMT),
+        "open": float(row.get("open", 0) or 0),
+        "high": float(row.get("high", 0) or 0),
+        "low": float(row.get("low", 0) or 0),
+        "close": float(row.get("close", 0) or 0),
+        "volume": int(row.get("volume", 0) or 0),
+    }
+
+
 def _to_vn_aware(dt_: datetime) -> datetime:
     if dt_ is None:
         return _today_vn()
@@ -409,18 +523,24 @@ def _to_vn_aware(dt_: datetime) -> datetime:
         return VN_TZ.localize(dt_)
     return dt_.astimezone(VN_TZ)
 
+
 @TTLCache(ttl_seconds=300)
-def get_history_df_vnstock(symbol: str,
-                            start: Optional[str] = None,
-                            end: Optional[str] = None) -> pd.DataFrame:
-    symbol = _sanitize_symbol(symbol); _validate_symbol(symbol)
+def get_history_df_vnstock(
+    symbol: str, start: Optional[str] = None, end: Optional[str] = None
+) -> pd.DataFrame:
+    symbol = _sanitize_symbol(symbol)
+    _validate_symbol(symbol)
 
     end_dt = datetime.strptime(end, "%Y-%m-%d") if end else _today_vn()
     end_dt = _to_vn_aware(end_dt)
     now_ict = _today_vn()
     end_dt = min(end_dt, now_ict)
 
-    start_dt = datetime.strptime(start, "%Y-%m-%d") if start else (end_dt - timedelta(days=370))
+    start_dt = (
+        datetime.strptime(start, "%Y-%m-%d")
+        if start
+        else (end_dt - timedelta(days=370))
+    )
     start_dt = _to_vn_aware(start_dt)
 
     df = _quote_history_with_fallback(symbol, _ymd(start_dt), _ymd(end_dt))
@@ -428,7 +548,8 @@ def get_history_df_vnstock(symbol: str,
     if df.empty:
         raise ValueError(f"VNStock: không có dữ liệu hợp lệ cho {symbol} (normalize)")
     df = df.asfreq("D").ffill()
-    return df[["open","high","low","close","volume"]]
+    return df[["open", "high", "low", "close", "volume"]]
+
 
 @TTLCache(ttl_seconds=300)
 def get_prices_df(symbol: str, days: int = 365) -> pd.DataFrame:
@@ -437,7 +558,8 @@ def get_prices_df(symbol: str, days: int = 365) -> pd.DataFrame:
     df = get_history_df_vnstock(symbol, start=_ymd(start), end=_ymd(end))
     today_ict = _today_vn().date()
     df = df[df.index.date <= today_ict]
-    return df.tail(days).asfreq("D").ffill()[["open","high","low","close","volume"]]
+    return df.tail(days).asfreq("D").ffill()[["open", "high", "low", "close", "volume"]]
+
 
 @TTLCache(ttl_seconds=300)
 def get_close_series(symbol: str, days: int = 365) -> pd.Series:
@@ -446,8 +568,9 @@ def get_close_series(symbol: str, days: int = 365) -> pd.Series:
     s = s[s > 0].dropna()
     return s
 
-# ========= Intraday helpers
+
 from pandas.api.types import is_numeric_dtype, is_datetime64_any_dtype
+
 
 def _to_ict_naive_index(s: pd.Series | pd.Index) -> pd.DatetimeIndex:
     ser = pd.Series(s) if isinstance(s, pd.Index) else s
@@ -471,6 +594,7 @@ def _to_ict_naive_index(s: pd.Series | pd.Index) -> pd.DatetimeIndex:
     di = di.tz_convert(VN_TZ).tz_localize(None)
     return di
 
+
 def _to_min_rule(interval: str) -> str:
     iv = (interval or "").strip().lower()
     if iv.endswith("min"):
@@ -478,6 +602,7 @@ def _to_min_rule(interval: str) -> str:
     if iv.endswith("m"):
         return iv[:-1] + "min"
     return "5min"
+
 
 def _normalize_ticks_df(ticks: pd.DataFrame, debug: bool = False) -> pd.DataFrame:
     if ticks is None or ticks.empty:
@@ -499,42 +624,63 @@ def _normalize_ticks_df(ticks: pd.DataFrame, debug: bool = False) -> pd.DataFram
     df.index = idx[mask]
 
     price_col = next(
-        (c for c in ("price","match_price","last_price","matched_price","p")
-         if c in df.columns),
-        None
+        (
+            c
+            for c in ("price", "match_price", "last_price", "matched_price", "p")
+            if c in df.columns
+        ),
+        None,
     )
-    vol_col   = next(
-        (c for c in (
-            "volume","vol","match_volume","matched_volume",
-            "accumulated_volume","qtty","quantity","volumn","v"
-        ) if c in df.columns),
-        None
+    vol_col = next(
+        (
+            c
+            for c in (
+                "volume",
+                "vol",
+                "match_volume",
+                "matched_volume",
+                "accumulated_volume",
+                "qtty",
+                "quantity",
+                "volumn",
+                "v",
+            )
+            if c in df.columns
+        ),
+        None,
     )
 
     out = pd.DataFrame(index=df.index)
-    out["price"]  = pd.to_numeric(df.get(price_col, np.nan), errors="coerce")
+    out["price"] = pd.to_numeric(df.get(price_col, np.nan), errors="coerce")
     out["volume"] = pd.to_numeric(df.get(vol_col, 0), errors="coerce").fillna(0.0)
 
     out = out.dropna(subset=["price"], how="all")
     return out.sort_index()
 
+
 def _normalize_intraday_ohlc_df(raw: pd.DataFrame) -> pd.DataFrame:
     if raw is None or getattr(raw, "empty", True):
-        return pd.DataFrame(columns=["open","high","low","close","volume"])
+        return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
 
     df = raw.copy()
     df.columns = [str(c).lower() for c in df.columns]
 
-    time_col = next((c for c in ("time","datetime","timestamp","tradingtime","date","_dt")
-                     if c in df.columns), None)
-    idx = _to_ict_naive_index(df[time_col]) if time_col else _to_ict_naive_index(df.index)
+    time_col = next(
+        (c for c in ("time", "datetime", "timestamp", "tradingtime", "date", "_dt") if c in df.columns),
+        None,
+    )
+    idx = (
+        _to_ict_naive_index(df[time_col])
+        if time_col
+        else _to_ict_naive_index(df.index)
+    )
 
     col_map = {
-        "open":   ["open","o","match_open","first_price"],
-        "high":   ["high","h","match_high","highest"],
-        "low":    ["low","l","match_low","lowest"],
-        "close":  ["close","c","match_price","last_price","price"],
-        "volume": ["volume","vol","match_volume","accumulated_volume","qtty","quantity"],
+        "open": ["open", "o", "match_open", "first_price"],
+        "high": ["high", "h", "match_high", "highest"],
+        "low": ["low", "l", "match_low", "lowest"],
+        "close": ["close", "c", "match_price", "last_price", "price"],
+        "volume": ["volume", "vol", "match_volume", "accumulated_volume", "qtty", "quantity"],
     }
     out = {}
     for std, cands in col_map.items():
@@ -543,18 +689,24 @@ def _normalize_intraday_ohlc_df(raw: pd.DataFrame) -> pd.DataFrame:
 
     res = pd.DataFrame(out, index=idx).sort_index()
     res = res.dropna(subset=["close"], how="all")
-    return res.astype({
-        "open":"float64","high":"float64","low":"float64",
-        "close":"float64","volume":"float64"
-    })
+    return res.astype(
+        {
+            "open": "float64",
+            "high": "float64",
+            "low": "float64",
+            "close": "float64",
+            "volume": "float64",
+        }
+    )
+
 
 def _resample_ticks_to_ohlcv(
     ticks: pd.DataFrame,
     interval: str = "5m",
-    debug: bool = False
+    debug: bool = False,
 ) -> pd.DataFrame:
     if ticks is None or ticks.empty:
-        return pd.DataFrame(columns=["open","high","low","close","volume"])
+        return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
 
     rule = _to_min_rule(interval)
     df = ticks.sort_index()
@@ -568,43 +720,60 @@ def _resample_ticks_to_ohlcv(
         out = pd.concat([ohlc, vol.rename("volume")], axis=1)
         out = out.dropna(subset=["close"], how="all")
         if not out.empty:
-            return out.astype({
-                "open":"float64","high":"float64","low":"float64",
-                "close":"float64","volume":"float64"
-            })
+            return out.astype(
+                {
+                    "open": "float64",
+                    "high": "float64",
+                    "low": "float64",
+                    "close": "float64",
+                    "volume": "float64",
+                }
+            )
     except Exception:
         pass
 
     floored = df.index.floor(rule)
     gb = df.groupby(floored)
-    out2 = pd.DataFrame({
-        "open":  gb["price"].first(),
-        "high":  gb["price"].max(),
-        "low":   gb["price"].min(),
-        "close": gb["price"].last(),
-        "volume": gb["volume"].sum(min_count=1)
-                  if hasattr(gb["volume"], "sum")
-                  else gb["volume"].sum(),
-    }).dropna(subset=["close"], how="all").sort_index()
-    return out2.astype({
-        "open":"float64","high":"float64","low":"float64",
-        "close":"float64","volume":"float64"
-    })
+    out2 = (
+        pd.DataFrame(
+            {
+                "open": gb["price"].first(),
+                "high": gb["price"].max(),
+                "low": gb["price"].min(),
+                "close": gb["price"].last(),
+                "volume": gb["volume"].sum(min_count=1)
+                if hasattr(gb["volume"], "sum")
+                else gb["volume"].sum(),
+            }
+        )
+        .dropna(subset=["close"], how="all")
+        .sort_index()
+    )
+    return out2.astype(
+        {
+            "open": "float64",
+            "high": "float64",
+            "low": "float64",
+            "close": "float64",
+            "volume": "float64",
+        }
+    )
+
 
 def _finalize_intraday(
     raw: pd.DataFrame,
     interval: str,
     days: int,
-    debug: bool = False
+    debug: bool = False,
 ) -> pd.DataFrame:
     """
     Nhận ticks hoặc OHLC-like → chuẩn hoá về OHLCV + cắt theo days.
     """
     if raw is None or getattr(raw, "empty", True):
-        return pd.DataFrame(columns=["open","high","low","close","volume"])
+        return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
 
     cols = {c.lower() for c in raw.columns}
-    is_ohlc_like = len({"open","high","low","close"} & cols) >= 2
+    is_ohlc_like = len({"open", "high", "low", "close"} & cols) >= 2
 
     if is_ohlc_like:
         df = _normalize_intraday_ohlc_df(raw)
@@ -618,13 +787,14 @@ def _finalize_intraday(
 
     return df
 
+
 @TTLCache(ttl_seconds=60)
 def get_intraday_df(
     symbol: str,
     interval: str = "5m",
     days: int = 1,
     source: str | None = None,
-    debug: bool = False
+    debug: bool = False,
 ) -> pd.DataFrame:
     """
     Lấy intraday OHLCV:
@@ -637,7 +807,7 @@ def get_intraday_df(
     try:
         _validate_symbol(sym)
     except ValueError:
-        return pd.DataFrame(columns=["open","high","low","close","volume"])
+        return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
 
     # 1) Quote(symbol=...).intraday()
     try:
@@ -660,7 +830,7 @@ def get_intraday_df(
         pass
 
     # 3) thử nguồn cụ thể
-    for src in ("VCI","TCBS","MSN"):
+    for src in ("VCI", "TCBS", "MSN"):
         try:
             qx = Quote(symbol=sym, source=src)
             rawx = qx.intraday()
@@ -681,21 +851,8 @@ def get_intraday_df(
     except Exception:
         pass
 
-    # 5) Data().intraday
-    try:
-        from vnstock import Data
-        d = Data()
-        if hasattr(d, "intraday"):
-            raw_d = d.intraday(symbol=sym, interval=interval, days=days)
-            df_d = _finalize_intraday(raw_d, interval, days, debug=debug)
-            if not df_d.empty:
-                return df_d
-    except Exception:
-        pass
+    return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
 
-    return pd.DataFrame(columns=["open","high","low","close","volume"])
-
-# ========= Format helpers =========
 
 def _same_trading_day(market_date_str: str) -> bool:
     """
@@ -706,6 +863,7 @@ def _same_trading_day(market_date_str: str) -> bool:
     now = _today_vn()
     today_str = now.strftime(DATE_FMT)
     return market_date_str == today_str
+
 
 def format_stock_info(symbol: str) -> str:
     """
@@ -726,14 +884,12 @@ def format_stock_info(symbol: str) -> str:
     if data.get("fallback", False):
         headline = (
             f"📊 **{data['symbol']}** — Giá đóng cửa phiên "
-            f"{data.get('fallback_date','gần nhất')}: {price:,} VNĐ"
+            f"{data.get('fallback_date', 'gần nhất')}: {price:,} VNĐ"
         )
         note = " (dữ liệu lấy từ lịch sử)"
     else:
         if _same_trading_day(market_date):
-            headline = (
-                f"📊 **{data['symbol']}** — Giá hiện tại: {price:,} VNĐ"
-            )
+            headline = f"📊 **{data['symbol']}** — Giá hiện tại: {price:,} VNĐ"
             note = ""
         else:
             headline = (
@@ -745,11 +901,12 @@ def format_stock_info(symbol: str) -> str:
     body = (
         f"{headline}  \n"
         f"• Mở cửa: {data.get('open')} | Cao nhất: {data.get('high')} | Thấp nhất: {data.get('low')}  \n"
-        f"• Thay đổi: {data.get('change',0):+.2f} ({data.get('percent_change',0):+.2f}%)  \n"
-        f"• Khối lượng: {data.get('volume',0):,}  \n"
+        f"• Thay đổi: {data.get('change', 0):+.2f} ({data.get('percent_change', 0):+.2f}%)  \n"
+        f"• Khối lượng: {data.get('volume', 0):,}  \n"
         f"🕒 Truy vấn lúc: {ts_query}{note}"
     )
     return body
+
 
 @TTLCache(ttl_seconds=300)
 def format_market_summary(indices: list[str] = None) -> str:
@@ -778,19 +935,21 @@ def format_market_summary(indices: list[str] = None) -> str:
             return "⚠️ Không thể lấy dữ liệu thị trường."
 
         return (
-            f"📊 **TỔNG QUAN THỊ TRƯỜNG VIỆT NAM**  \n" +
-            "  \n".join(summaries) + "  \n\n" +
-            f"{format_top_stocks('up', 3)}  \n\n" +
-            f"{format_top_stocks('down', 3)}  \n" +
-            f"🕒 Cập nhật: {get_time_vn()}"
+            f"📊 **TỔNG QUAN THỊ TRƯỜNG VIỆT NAM**  \n"
+            + "  \n".join(summaries)
+            + "  \n\n"
+            + f"{format_top_stocks('up', 3)}  \n\n"
+            + f"{format_top_stocks('down', 3)}  \n"
+            + f"🕒 Cập nhật: {get_time_vn()}"
         )
     except Exception as e:
         print(f"[VNStock] Lỗi tóm tắt thị trường: {e}")
         return "⚠️ Không thể lấy dữ liệu thị trường."
 
+
 def format_history_text(symbol: str, days: int, data: dict) -> str:
     """
-    Chuỗi mô tả lịch sử price N ngày.
+    Chuỗi mô tả lịch sử price N ngày (N phiên gần đây).
     """
     if not data or "error" in data:
         return f"📜 {symbol.upper()} — lịch sử {days} ngày: chưa khả dụng."
@@ -816,13 +975,61 @@ def format_history_text(symbol: str, days: int, data: dict) -> str:
         )
 
 
+def format_price_at_date(symbol: str, query_date: date, data: dict) -> str:
+    """
+    Format text cho câu hỏi kiểu:
+    - Giá VCB ngày 2/12/2025?
+    - Giá VCB 3 ngày trước?
+    """
+    sym = (symbol or "").upper()
+    if not data or "error" in data:
+        return (
+            f"⚠️ Không thể lấy dữ liệu cho mã **{sym}** quanh ngày "
+            f"{query_date.strftime(DATE_FMT)}."
+        )
+
+    real_date_str = data.get("date")
+    query_date_str = query_date.strftime(DATE_FMT)
+
+    note = ""
+    if real_date_str != query_date_str:
+        note = (
+            f" (phiên giao dịch gần nhất trước hoặc sau ngày {query_date_str})"
+        )
+
+    o = data.get("open", 0.0)
+    h = data.get("high", 0.0)
+    l = data.get("low", 0.0)
+    c = data.get("close", 0.0)
+    v = int(data.get("volume", 0) or 0)
+
+    body = (
+        f"📅 **{sym} — Giá cổ phiếu ngày {real_date_str}**{note}\n"
+        f"• Mở cửa: {o:,.2f} | Cao nhất: {h:,.2f} | Thấp nhất: {l:,.2f}\n"
+        f"• Đóng cửa: {c:,.2f} | Khối lượng: {v:,}"
+    )
+    return body
+
+
 __all__ = [
-    "DATE_FMT","DATETIME_FMT","TTLCache","get_time_vn",
-    "discover_market_indices","get_index_detail","get_stock_quote",
-    "get_top_stocks","get_history_prices",
-    "get_history_df_vnstock","get_prices_df","get_close_series",
+    "DATE_FMT",
+    "DATETIME_FMT",
+    "TTLCache",
+    "get_time_vn",
+    "discover_market_indices",
+    "get_index_detail",
+    "get_stock_quote",
+    "get_top_stocks",
+    "get_history_prices",
+    "get_price_at_date",
+    "get_history_df_vnstock",
+    "get_prices_df",
+    "get_close_series",
     "get_intraday_df",
-    "format_stock_info","format_top_stocks",
-    "format_market_summary","format_history_text",
+    "format_stock_info",
+    "format_top_stocks",
+    "format_market_summary",
+    "format_history_text",
+    "format_price_at_date",
     "_same_trading_day",
 ]

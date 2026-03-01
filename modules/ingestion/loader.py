@@ -111,11 +111,29 @@ def load_to_vector_db(
         batch = valid[start : start + batch_size]
         senti_res = _infer_sentiment_batch(batch)
 
-        texts = [b["content"] for b in batch]
+        texts = []
+        for b in batch:
+            summary = (b.get("summary", "") or "").strip()
+            content = (b.get("content", "") or "").strip()
+            if summary:
+                txt = (summary + "\n" + content).strip()
+            else:
+                txt = content
+            texts.append(txt)
 
         dense_vecs = embedder_services.encode_dense(texts)
 
-        sparse_vecs = embedder_services.encode_sparse(texts)
+        try:
+            embedder_services.fit_bm25(texts)
+        except Exception as e:
+            print(f"[Loader] Lỗi khi fit BM25: {e}")
+
+        try:
+            sparse_vecs = embedder_services.encode_sparse(texts)
+        except Exception as e:
+            print(f"[Loader] Lỗi khi encode sparse vectors: {e}")
+            sparse_vecs = [{"indices": [], "values": []} 
+                           for _ in texts]
 
         points: List[models.PointStruct] = []
         for j, d in enumerate(batch):

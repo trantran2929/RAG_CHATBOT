@@ -1,15 +1,13 @@
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 import redis
-from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, AutoModelForSequenceClassification
-from transformers.pipelines import pipeline
+from transformers import AutoTokenizer, AutoModel
 import torch
 from dotenv import load_dotenv
 from huggingface_hub import login
-import os, time
+import os
 from rank_bm25 import BM25Okapi
 from sentence_transformers import CrossEncoder
-import requests
 import numpy as np
 from langchain.chat_models import init_chat_model
 
@@ -60,74 +58,71 @@ class RedisCacheServices:
 
 redis_services = RedisCacheServices()
 
-# class LLMServices:
-#     def __init__(self, model_id="google/gemma-3-1b-it"):
-#         self.model = AutoModelForCausalLM.from_pretrained(
-#             model_id,
-#             device_map="auto",
-#             torch_dtype=torch.float16,
-#             trust_remote_code=True,
-#             # low_cpu_mem_usage=True,
-#             offload_folder="offload",
-#             offload_buffers=True
-#         )
-#         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
-#         self.generator = pipeline(
-#             "text-generation",
-#             model=self.model,
-#             tokenizer=self.tokenizer,
-#             max_new_tokens=256,
-#             do_sample=True,
-#             temperature=0.6,
-#             return_full_text=True,
-#             repetition_penalty=1.2
-#         )
-
-#     def generate(self, prompt: str):
-#         return self.generator(prompt)[0]["generated_text"]
-
-#     # try:
-#     #     llm_services = LLMServices()
-#     # except Exception as e:
-#     #     print("Skip LLMServices init:", e)
-#     #     llm_services = None
-# llm_services = LLMServices()
-
 class LLMServices:
-    def __init__(self,
-                 base_url="https://nonomissible-winfred-doggedly.ngrok-free.dev/v1",
-                 model_name="qwen3-30b-thinking"):
-        self.base_url = base_url.rstrip("/")
-        self.model_name = model_name
-        self.api_key = os.getenv("LLM_API_KEY", "dummy") 
+    def __init__(
+        self,
+        base_url: str | None = None,
+        model_name: str | None = None,
+    ):
+        """
+        Wrapper cho LLM (Llama 3 8B Instruct chạy qua vLLM trên server ckey).
 
+        - base_url: URL OpenAI-compatible, mặc định = http://localhost:8000/v1
+                    (gọi qua SSH tunnel: ssh -p 2357 -L 8000:localhost:8000 root@n1.ckey.vn)
+        - model_name: tên model mà vLLM serve, mặc định: meta-llama/Meta-Llama-3-8B-Instruct
+        """
+        # Đọc từ env trước, nếu không có thì dùng default
+        self.base_url = (base_url or os.getenv("LLM_BASE_URL", "http://localhost:8000/v1")).rstrip("/")
+        self.model_name = model_name or os.getenv(
+            "LLM_MODEL_NAME",
+            "meta-llama/Meta-Llama-3-8B-Instruct",
+        )
+
+        # vLLM không check thật api_key, nhưng OpenAI client bắt buộc có
+        self.api_key = os.getenv("LLM_API_KEY", "dummy")
+
+        # init_chat_model là helper của bạn, đang dùng provider="openai"
+        # vì vLLM expose OpenAI-compatible API
         self.model = init_chat_model(
             model=self.model_name,
-            model_provider="openai",       
+            model_provider="openai",
             base_url=self.base_url,
             api_key=self.api_key,
         )
 
-    def generate(self, prompt: str, temperature: float = 0.7, max_tokens: int = 2048):
+    def generate(
+        self,
+        prompt: str,
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> str:
         """
         Gọi model để sinh phản hồi (chat completion).
         """
         try:
             res = self.model.invoke(
                 [
-                    {"role": "system", "content": "Bạn là trợ lý AI tài chính thông minh, trả lời bằng tiếng Việt."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "Bạn là trợ lý AI tài chính thông minh, trả lời bằng tiếng Việt, giải thích dễ hiểu, ngắn gọn.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
-            # Kết quả LangChain có thể là string hoặc object
-            return res if isinstance(res, str) else getattr(res, "content", str(res))
+            # LangChain ChatModel có thể trả về Message object hoặc string
+            if isinstance(res, str):
+                return res
+            return getattr(res, "content", str(res))
         except Exception as e:
             print(f"[LLM] Lỗi khi gọi model qua LangChain: {e}")
             return f"[Lỗi LLM từ server] {e}"
 
+
+
 llm_services = LLMServices()
+
 class EmbedderServices:
     def __init__(
             self, 
@@ -154,6 +149,8 @@ class EmbedderServices:
         self.bm25 = BM25Okapi(self.corpus_tokens)
         unique_tokens = sorted(set(token for doc in self.corpus_tokens for token in doc))
         self.vocab = {token: idx for idx, token in enumerate(unique_tokens)}
+
+        print(f"[BM25] Fitted. Corpus size={len(corpus)}, Vocab size={len(self.vocab)}")
 
     def auto_fit_bm25(self, collection_name, max_docs=5000):
         try:
