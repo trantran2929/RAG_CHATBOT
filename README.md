@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Trợ lý tài chính AI kết hợp RAG + Machine Learning + LLM</b><br/>
-  Phân tích – Trả lời – Dự báo thị trường chứng khoán 🇻🇳
+  Phân tích – Trả lời – Dự báo thị trường chứng khoán VN
 </p>
 
 <p align="center">
