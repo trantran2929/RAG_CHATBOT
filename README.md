@@ -38,7 +38,7 @@
 • Dự báo VCB phiên tới
 ```
 ## 🧠 Kiến trúc hệ thống
-  ```mermaid
+```mermaid
     flowchart TD
       A[User Query] --> B[Processor]
       B --> C[Router]
@@ -55,6 +55,7 @@
   
       J --> K[Response]
       K --> L[Cache]
+```
       
 ## 🔥 Tính năng nổi bật
 
