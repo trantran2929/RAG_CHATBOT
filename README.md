@@ -39,7 +39,7 @@
 ```
 ## 🧠 Kiến trúc hệ thống
   ```mermaid
-  flowchart TD
+    flowchart TD
       A[User Query] --> B[Processor]
       B --> C[Router]
   
