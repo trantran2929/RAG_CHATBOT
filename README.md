@@ -38,8 +38,8 @@
 • Dự báo VCB phiên tới
 ```
 ## 🧠 Kiến trúc hệ thống
-    ```mermaid
-    flowchart TD
+  ```mermaid
+  flowchart TD
       A[User Query] --> B[Processor]
       B --> C[Router]
   
