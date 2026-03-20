@@ -32,6 +32,10 @@
 ## ✨ Demo Use Cases
 
 ```text
+• Giá cổ phiếu FPT hôm nay thế nào?
+• Tin tức đáng chú ý về VNIndex
+• Có nên mua HPG không?
+• Dự báo VCB phiên tới
 
 ## 🔥 Tính năng nổi bật
 
@@ -154,7 +158,4 @@ Kết hợp nhiều nguồn dữ liệu:
 
 - Python  
 - LangGraph (Pipeline orchestration)  
-• Giá cổ phiếu FPT hôm nay thế nào?
-• Tin tức đáng chú ý về VNIndex
-• Có nên mua HPG không?
-• Dự báo VCB phiên tới
+
