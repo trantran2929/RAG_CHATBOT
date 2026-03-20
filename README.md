@@ -38,23 +38,24 @@
 • Dự báo VCB phiên tới
 ```
 ## 🧠 Kiến trúc hệ thống
+    ```mermaid
     flowchart TD
-    A[User Query] --> B[Processor]
-    B --> C[Router]
-
-    C -->|API| D[External APIs]
-    C -->|RAG| E[Embedder]
-
-    E --> F[Vector DB]
-    F --> G[Retriever]
-    G --> H[Reranker]
-
-    H --> I[Prompt Builder]
-    I --> J[LLM - Llama 3]
-
-    J --> K[Response]
-    K --> L[Cache]
-    
+      A[User Query] --> B[Processor]
+      B --> C[Router]
+  
+      C -->|API| D[External APIs]
+      C -->|RAG| E[Embedder]
+  
+      E --> F[Vector DB]
+      F --> G[Retriever]
+      G --> H[Reranker]
+  
+      H --> I[Prompt Builder]
+      I --> J[LLM - Llama 3]
+  
+      J --> K[Response]
+      K --> L[Cache]
+      
 ## 🔥 Tính năng nổi bật
 
 ### 🧠 1. Hiểu ngữ nghĩa & Intent Detection
