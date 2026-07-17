@@ -1,8 +1,8 @@
 # 🚀 AI Financial Assistant & Stock Forecasting System
 
 <p align="center">
-  <b>Trợ lý tài chính AI kết hợp RAG + Machine Learning + LLM</b><br/>
-  Phân tích – Trả lời – Dự báo thị trường chứng khoán VN
+  <b>AI-Powered Financial Assistant Combining RAG + Machine Learning + LLM</b><br/>
+  Analyze • Answer • Forecast the Vietnamese Stock Market
 </p>
 
 <p align="center">
@@ -15,27 +15,27 @@
 
 ---
 
-## 📌 Giới thiệu
+## 📌 Overview
 
-Đây là hệ thống **AI Financial Assistant** có khả năng:
+This project is an **AI Financial Assistant** designed to:
 
-- 🧠 Hiểu câu hỏi tài chính bằng tiếng Việt  
-- 🔎 Truy xuất thông tin từ dữ liệu thực (RAG)  
-- 📰 Phân tích tin tức + sentiment thị trường  
-- 📈 Dự báo giá cổ phiếu bằng mô hình Machine Learning  
-- 🤖 Sinh câu trả lời thông minh bằng LLM  
+- 🧠 Understand financial questions in Vietnamese
+- 🔎 Retrieve relevant information from real-world data using Retrieval-Augmented Generation (RAG)
+- 📰 Analyze financial news and market sentiment
+- 📈 Forecast stock prices using Machine Learning models
+- 🤖 Generate intelligent, context-aware responses with a Large Language Model (LLM)
 
-👉 Mục tiêu: xây dựng một **AI Assistant chuyên sâu cho chứng khoán Việt Nam**
+👉 Goal: Build an **advanced AI assistant specialized in the Vietnamese stock market**.
 
 ---
 
 ## ✨ Demo Use Cases
 
 ```text
-• Giá cổ phiếu FPT hôm nay thế nào?
-• Tin tức đáng chú ý về VNIndex
-• Có nên mua HPG không?
-• Dự báo VCB phiên tới
+• What is the current price of FPT stock?
+• What are today's major VN-Index news highlights?
+• Should I buy HPG stock?
+• Forecast VCB's next trading session.
 ```
 ## 🧠 Kiến trúc hệ thống
 ```mermaid
@@ -57,87 +57,84 @@
       K --> L[Cache]
 ```
       
-## 🔥 Tính năng nổi bật
+## 🔥 Key Features
 
-### 🧠 1. Hiểu ngữ nghĩa & Intent Detection
+### 🧠 1. Semantic Understanding & Intent Detection
 
-- Tự động nhận diện:
-  - Mã cổ phiếu (VCB, FPT, HPG…)
-  - Ý định người dùng (giá, tin tức, dự báo…)
-- Hỗ trợ tiếng Việt tự nhiên
-- Chuẩn hóa và xử lý query trước khi đưa vào pipeline
+- Automatically identifies:
+  - Stock symbols (VCB, FPT, HPG, etc.)
+  - User intent (price inquiry, news, forecast, etc.)
+- Supports natural Vietnamese language queries
+- Normalizes and preprocesses user input before entering the AI pipeline
 
 ---
 
-### 🔍 2. Hybrid Search (RAG nâng cao)
+### 🔍 2. Hybrid Search (Advanced RAG)
 
-Kết hợp nhiều kỹ thuật:
+Combines multiple retrieval techniques:
 
-- Dense Embedding (Semantic Search)
+- Dense Embeddings (Semantic Search)
 - BM25 (Keyword Search)
-- RRF (Reciprocal Rank Fusion)
+- Reciprocal Rank Fusion (RRF)
 - Cross-Encoder Reranking
 
-👉 Giúp tăng độ chính xác truy xuất thông tin đáng kể so với chỉ dùng 1 phương pháp
+👉 This hybrid approach significantly improves retrieval accuracy compared to using a single retrieval method.
 
 ---
 
-### 📰 3. Pipeline dữ liệu tài chính
+### 📰 3. Financial Data Pipeline
 
-- Crawl dữ liệu từ **CafeF**
-- Làm sạch và chuẩn hóa văn bản
-- Chunk document để tối ưu retrieval
-- Trích xuất thông tin:
-  - Mã cổ phiếu
-  - Chỉ số thị trường (VNIndex, VN30…)
-  - Sentiment (tích cực / tiêu cực / trung lập)
+- Crawls financial news from CafeF
+- Cleans and normalizes raw text
+- Splits documents into optimized chunks for retrieval
+- Extracts structured information, including:
+  - Stock symbols
+  - Market indices (VN-Index, VN30, etc.)
+  - Sentiment (Positive / Negative / Neutral)
 
 ---
 
 ### 🤖 4. LLM Integration
 
 - Model: **Llama-3 8B Instruct (vLLM)**
-- Trả lời dựa trên context từ RAG
-- Output:
-  - Tự nhiên
-  - Ngắn gọn
-  - Dễ hiểu với người dùng
+- Generates responses grounded in retrieved context
+- Produces answers that are:
+  - Natural
+  - Concise
+  - Easy to understand
+---
+
+### 📈 5. Stock Price Forecasting (Machine Learning)
+
+Model: **SARIMAX (Time Series Forecasting)**
+
+Uses multiple data sources:
+  - Historical stock prices
+  - News sentiment
+  - Market indices
+
+👉 Predicts:
+- Next trading session's closing price
+- Upward or downward trend
+- Prediction confidence
 
 ---
 
-### 📈 5. Dự báo cổ phiếu (Machine Learning)
+### ⚡ 6. Intelligent Caching
 
-- Model: **SARIMAX (Time Series Forecasting)**
-
-Kết hợp nhiều nguồn dữ liệu:
-
-- Giá cổ phiếu lịch sử  
-- Sentiment từ tin tức  
-- Chỉ số thị trường  
-
-👉 Dự báo:
-
-- Giá phiên tiếp theo  
-- Xu hướng tăng / giảm  
-- Mức độ tin cậy (confidence)  
+- Redis for real-time caching
+- Local file storage as a fallback
+- Stores conversation history
+- Reduces latency and LLM inference costs
 
 ---
 
-### ⚡ 6. Cache thông minh
+### 🔄 7. Automated Data Pipeline
 
-- Redis (real-time caching)
-- Fallback: lưu file local
-- Lưu lịch sử hội thoại
-- Giảm latency và chi phí gọi LLM
-
----
-
-### 🔄 7. Auto Data Pipeline
-
-- Tự động crawl dữ liệu mới theo lịch
-- Loại bỏ dữ liệu trùng lặp
-- Cập nhật liên tục vào Vector DB
-- Đảm bảo dữ liệu luôn fresh
+- Periodically crawls new financial data
+- Removes duplicate records
+- Continuously updates the Vector Database
+- Ensures knowledge remains fresh and up to date
 
 ---
 
@@ -163,7 +160,7 @@ Kết hợp nhiều nguồn dữ liệu:
 ### 🗄️ Data
 
 - Qdrant (Vector Database)  
-- Redis (Cache)  
+- Redis (Caching)  
 
 ---
 
