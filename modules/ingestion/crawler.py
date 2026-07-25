@@ -1,17 +1,38 @@
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
 
 BASE_URL = "https://cafef.vn"
 TIMEZONE_OFFSET = 7 # UTC+7
+REQUEST_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; RAG_CHATBOT/1.0; +https://cafef.vn)",
+    "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.7",
+}
+
+
+def _http_session() -> requests.Session:
+    session = requests.Session()
+    retry = Retry(
+        total=3,
+        connect=3,
+        read=3,
+        backoff_factor=0.5,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=frozenset({"GET"}),
+    )
+    session.mount("https://", HTTPAdapter(max_retries=retry))
+    session.headers.update(REQUEST_HEADERS)
+    return session
 
 
 def normalize_time(time_tag) -> str:
     """Chuẩn hóa thời gian về format dd-mm-YYYY HH:MM:SS (UTC+7)."""
     now = datetime.utcnow() + timedelta(hours=TIMEZONE_OFFSET)
     if not time_tag:
-        return now.strftime("%d/%m/%Y, %H:%M:%S")
+        return now.strftime("%d-%m-%Y %H:%M:%S")
 
     # Nếu có attribute title sẵn ISO (2025-09-25T08:27:00)
     if time_tag.has_attr("title"):
@@ -38,10 +59,10 @@ def normalize_time(time_tag) -> str:
     return dt.strftime("%d-%m-%Y %H:%M:%S")
 
 
-def get_article_content(link: str) -> str:
+def get_article_content(link: str, session: requests.Session | None = None) -> str:
     """Lấy nội dung chi tiết của 1 bài viết."""
     try:
-        resp = requests.get(link, timeout=10)
+        resp = (session or _http_session()).get(link, timeout=15)
         resp.encoding = "utf-8"
     except Exception as e:
         print(f"[Crawler] Lỗi khi request {link}: {e}")
@@ -67,7 +88,11 @@ def get_article_content(link: str) -> str:
 def crawl_cafef_stock(max_pages: int = 1):
     """Crawl tin tức Thị trường chứng khoán trên CafeF."""
     articles = []
-    for page in range(1, max_pages + 1):
+    seen_urls = set()
+    session = _http_session()
+    # CafeF no longer serves /trang-N.chn (HTTP 404). The scheduler polls the
+    # live category page, and Qdrant deduplication keeps each poll idempotent.
+    for page in range(1, min(max_pages, 1) + 1):
         url = (
             f"{BASE_URL}/thi-truong-chung-khoan.chn"
             if page == 1
@@ -75,7 +100,7 @@ def crawl_cafef_stock(max_pages: int = 1):
         )
 
         try:
-            resp = requests.get(url, timeout=10)
+            resp = session.get(url, timeout=15)
             resp.encoding = "utf-8"
         except Exception as e:
             print(f"[Crawler] Lỗi khi request {url}: {e}")
@@ -96,6 +121,9 @@ def crawl_cafef_stock(max_pages: int = 1):
             href = link_tag.get("href", "")
             title = link_tag.get("title") or link_tag.text.strip()
             link = BASE_URL + href if href.startswith("/") else href
+            if not link or link in seen_urls:
+                continue
+            seen_urls.add(link)
             article_id = item.get("data-id") or href.split("-")[-1].replace(".chn", "")
 
             summary_tag = item.select_one("p.sapo") or item.select_one("p.box-category-sapo")
@@ -105,7 +133,7 @@ def crawl_cafef_stock(max_pages: int = 1):
             time_text = normalize_time(time_tag)
 
             # Nội dung chi tiết
-            full_content = get_article_content(link)
+            full_content = get_article_content(link, session=session)
 
             articles.append({
                 "id": article_id,

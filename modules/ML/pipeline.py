@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 import datetime as dt
+import os
 import pytz
 from typing import Optional, List, Tuple, Dict
 
@@ -16,15 +17,24 @@ from modules.ML.features import build_news_features
 from modules.ML.predictors.sarimax_exog import arima_select_fit
 from modules.ML.registry import save_model_meta, load_model_meta
 from modules.ML.metrics import rmse as _rmse, mae as _mae
+from statsmodels.tsa.ar_model import AutoReg
 
 ICT = pytz.timezone("Asia/Ho_Chi_Minh")
 
-VN_HOLIDAYS: set[str] = set()
+MODEL_SCHEMA_VERSION = 4
+_FIXED_VN_HOLIDAYS = {(1, 1), (4, 30), (5, 1), (9, 2)}
+DEFAULT_ROUND_TRIP_COST_BPS = 35.0
+DEFAULT_SIGNAL_BUFFER_BPS = 15.0
 
 
 # ===== Lịch giao dịch / phiên =====
 def is_vn_holiday(d: dt.date) -> bool:
-    return d.strftime("%Y-%m-%d") in VN_HOLIDAYS
+    try:
+        import holidays
+        return d in holidays.country_holidays("VN", years=[d.year])
+    except Exception:
+        # Fallback khi dependency chưa được cài; Tết âm lịch cần package holidays.
+        return (d.month, d.day) in _FIXED_VN_HOLIDAYS
 
 def next_trading_day(d: dt.date) -> dt.date:
     nxt = d + dt.timedelta(days=1)
@@ -49,6 +59,137 @@ def pick_target_trading_day(now: Optional[dt.datetime] = None) -> dt.date:
     if st in ("pre_open","morning","lunch","afternoon"):
         return now.date()
     return next_trading_day(now.date())
+
+
+def _model_max_staleness_days() -> int:
+    return max(0, int(os.getenv("MODEL_MAX_STALENESS_DAYS", "0")))
+
+
+def _model_is_stale(meta: Optional[Dict], latest_market_date: dt.date) -> bool:
+    if not meta or int(meta.get("schema_version", 0)) != MODEL_SCHEMA_VERSION:
+        return True
+    raw = meta.get("last_train_date")
+    try:
+        trained_through = dt.date.fromisoformat(str(raw))
+    except (TypeError, ValueError):
+        return True
+    age_days = (latest_market_date - trained_through).days
+    return age_days < 0 or age_days > _model_max_staleness_days()
+
+
+def _fit_autoreg_returns(prices: pd.Series, steps: int = 1) -> Dict:
+    """Fit an actual return model and derive uncertainty from residuals."""
+    close = pd.to_numeric(prices, errors="coerce").dropna().astype("float64")
+    returns = np.log(close / close.shift(1)).dropna()
+    if len(returns) < 12:
+        raise ValueError("Không đủ dữ liệu để huấn luyện AutoReg.")
+    lags = min(5, max(1, len(returns) // 8))
+    fit = AutoReg(returns, lags=lags, old_names=False, trend="ct").fit()
+    pred = np.asarray(fit.predict(len(returns), len(returns) + steps - 1), dtype=float)
+    sigma = float(np.std(fit.resid, ddof=1)) if len(fit.resid) > 1 else 0.0
+    return {"returns": pred, "sigma": sigma, "fit": fit, "lags": lags}
+
+
+def _signal_threshold_return(
+    round_trip_cost_bps: Optional[float] = None,
+    signal_buffer_bps: Optional[float] = None,
+) -> float:
+    """Minimum absolute log-return required before emitting a trade signal."""
+    cost = (
+        float(os.getenv("TRADING_ROUND_TRIP_COST_BPS", DEFAULT_ROUND_TRIP_COST_BPS))
+        if round_trip_cost_bps is None
+        else float(round_trip_cost_bps)
+    )
+    buffer = (
+        float(os.getenv("TRADING_SIGNAL_BUFFER_BPS", DEFAULT_SIGNAL_BUFFER_BPS))
+        if signal_buffer_bps is None
+        else float(signal_buffer_bps)
+    )
+    return max(0.0, cost + buffer) / 10_000.0
+
+
+def signal_from_return(
+    predicted_return: float,
+    round_trip_cost_bps: Optional[float] = None,
+    signal_buffer_bps: Optional[float] = None,
+) -> str:
+    """Map expected return to BUY/SELL/NO_TRADE after costs and safety buffer."""
+    threshold = _signal_threshold_return(round_trip_cost_bps, signal_buffer_bps)
+    value = float(predicted_return)
+    if value > threshold:
+        return "BUY"
+    if value < -threshold:
+        return "SELL"
+    return "NO_TRADE"
+
+
+def _holdout_metrics(
+    prices: pd.Series,
+    X_raw: Optional[pd.DataFrame] = None,
+    test_size: int = 20,
+) -> Dict[str, float]:
+    """
+    Expanding-window SARIMAX evaluation.
+
+    Each target row only uses earlier returns. Exogenous rows must already be
+    point-in-time aligned: row t contains information available before target t.
+    """
+    close = pd.to_numeric(prices, errors="coerce").dropna().astype("float64")
+    returns = np.log(close / close.shift(1)).dropna()
+    n_test = min(max(5, test_size), max(5, len(returns) // 5))
+    start = len(returns) - n_test
+    preds, actuals = [], []
+    for i in range(start, len(returns)):
+        y_train = returns.iloc[:i]
+        if len(y_train) < 20:
+            continue
+        train_model = pd.Series(
+            y_train.to_numpy(dtype="float64"),
+            index=pd.RangeIndex(len(y_train)),
+        )
+        X_train = None
+        X_next = None
+        use_exog = X_raw is not None and not X_raw.empty
+        if use_exog:
+            fold_raw = X_raw.reindex(returns.index).fillna(0.0)
+            X_train_raw = fold_raw.iloc[:i]
+            X_next_raw = fold_raw.iloc[[i]]
+            use_exog = bool(np.abs(X_train_raw.to_numpy(dtype=float)).sum() > 0)
+            if use_exog:
+                X_train, scaler = _standardize_df(X_train_raw)
+                X_next = _apply_scaler(X_next_raw, scaler)[X_train.columns]
+                X_train = X_train.reset_index(drop=True)
+
+        fit, _, _ = arima_select_fit(
+            train_model,
+            d=0,
+            max_p=max(1, int(os.getenv("SARIMAX_MAX_P", "2"))),
+            max_q=max(1, int(os.getenv("SARIMAX_MAX_Q", "2"))),
+            trends=("n", "c"),
+            exog=X_train if use_exog else None,
+        )
+        forecast = fit.get_forecast(steps=1, exog=X_next if use_exog else None)
+        predicted = np.asarray(forecast.predicted_mean, dtype=float).reshape(-1)[0]
+        preds.append(float(predicted))
+        actuals.append(float(returns.iloc[i]))
+    pred_arr = np.asarray(preds)
+    actual_arr = np.asarray(actuals)
+    if len(actual_arr) == 0:
+        return {
+            "rmse": float("nan"),
+            "mae": float("nan"),
+            "directional_accuracy": float("nan"),
+            "test_size": 0,
+            "method": "expanding_window_sarimax",
+        }
+    return {
+        "rmse": _rmse(actual_arr, pred_arr),
+        "mae": _mae(actual_arr, pred_arr),
+        "directional_accuracy": float(np.mean(np.sign(pred_arr) == np.sign(actual_arr))),
+        "test_size": int(len(actual_arr)),
+        "method": "expanding_window_sarimax_exog" if X_raw is not None and not X_raw.empty
+        else "expanding_window_sarimax_price_only",
+    }
 
 
 # ===== Tiện ích xử lý chuỗi giá & exog =====
@@ -115,6 +256,29 @@ def _add_price_lag_features(symbol: str, X: pd.DataFrame, lags=(1,2,5)) -> pd.Da
         )
     return X2
 
+
+def _latest_price_lag_row(
+    symbol: str,
+    last_observed_idx: pd.Timestamp,
+    target_idx: pd.Timestamp,
+    lags=(1, 2, 5),
+) -> pd.DataFrame:
+    """Build target t+1 price lags using returns observed through t."""
+    close = get_close_series(symbol, days=500)
+    out = pd.DataFrame(index=[pd.Timestamp(target_idx).tz_localize(None)])
+    if close is None or len(close) < 2:
+        for lag in lags:
+            out[f"ret_lag{lag}"] = 0.0
+        return out
+
+    series = pd.to_numeric(close, errors="coerce").dropna().astype("float64")
+    series.index = pd.DatetimeIndex(series.index).tz_localize(None)
+    series = series.loc[series.index <= pd.Timestamp(last_observed_idx).tz_localize(None)]
+    returns = np.log(series / series.shift(1)).dropna()
+    for lag in lags:
+        out[f"ret_lag{lag}"] = float(returns.tail(lag).sum()) if len(returns) else 0.0
+    return out
+
 def _align_exog_to_y(symbol: str,
                      y: pd.Series,
                      add_index: Optional[List[str]] = None,
@@ -125,12 +289,16 @@ def _align_exog_to_y(symbol: str,
     start_ts = int(pd.Timestamp(y.index[0], tz=ICT).timestamp())
     end_ts   = int(pd.Timestamp(y.index[-1], tz=ICT).timestamp())
 
-    feats = build_news_features(
-        symbol,
-        start_ts,
-        end_ts,
-        add_index=add_index or ["VNINDEX","VN30"]
-    )
+    try:
+        feats = build_news_features(
+            symbol,
+            start_ts,
+            end_ts,
+            add_index=add_index or ["VNINDEX","VN30"]
+        )
+    except Exception:
+        # Price-only SARIMAX remains available when Qdrant/news is unavailable.
+        return pd.DataFrame(index=y.index)
     if feats.empty:
         return pd.DataFrame(index=y.index)
 
@@ -153,26 +321,43 @@ def _build_exog_row_for_forecast(symbol: str,
                                  last_idx: pd.Timestamp,
                                  feat_cols: List[str],
                                  add_index: Optional[List[str]],
-                                 scaler: Dict[str, Dict[str, float]]) -> pd.DataFrame:
+                                 scaler: Dict[str, Dict[str, float]],
+                                 target_idx: Optional[pd.Timestamp] = None) -> pd.DataFrame:
+    last_idx = pd.Timestamp(last_idx).tz_localize(None)
+    if target_idx is None:
+        target_idx = pd.Timestamp(next_trading_day(last_idx.date()))
+    target_idx = pd.Timestamp(target_idx).tz_localize(None)
     end_ts = int(pd.Timestamp(last_idx, tz=ICT).timestamp())
     start_ts = end_ts - 3*24*3600
 
-    feats = build_news_features(
-        symbol,
-        start_ts,
-        end_ts,
-        add_index=add_index or ["VNINDEX","VN30"]
-    )
+    try:
+        feats = build_news_features(
+            symbol,
+            start_ts,
+            end_ts,
+            add_index=add_index or ["VNINDEX","VN30"]
+        )
+    except Exception:
+        feats = pd.DataFrame()
 
     if feats.empty:
-        X_raw = pd.DataFrame(index=[pd.Timestamp(last_idx)],
-                             columns=feat_cols).fillna(0.0)
+        X_raw = pd.DataFrame(
+            0.0,
+            index=[target_idx],
+            columns=feat_cols,
+            dtype="float64",
+        )
     else:
         X_raw = feats.set_index("date")
         X_raw.index = pd.DatetimeIndex(X_raw.index).tz_localize(None)
-        X_raw = X_raw.reindex([pd.Timestamp(last_idx)]).fillna(0.0)
+        # Training uses news.shift(1): target t+1 consumes news observed on t.
+        latest_news = X_raw.reindex([last_idx]).fillna(0.0)
+        latest_news.index = pd.DatetimeIndex([target_idx])
+        X_raw = latest_news
 
-    X_raw = _add_price_lag_features(symbol, X_raw, lags=(1,2,5))
+    price_lags = _latest_price_lag_row(symbol, last_idx, target_idx, lags=(1, 2, 5))
+    for column in price_lags.columns:
+        X_raw[column] = price_lags[column]
 
     for c in feat_cols:
         if c not in X_raw.columns:
@@ -274,25 +459,29 @@ def train_gap_model(symbol: str,
     )
 
     use_exog = (not X_raw.empty) and bool((np.abs(X_raw.values).sum() > 0))
+    # Trading sessions are irregular calendar dates. Statsmodels will reject
+    # extending a DatetimeIndex without fixed frequency in future versions, so
+    # fit on positional indices while retaining real dates for features/meta.
+    r_model = pd.Series(r.to_numpy(dtype="float64"), index=pd.RangeIndex(len(r)))
 
     if use_exog:
         X_std, scaler = _standardize_df(X_raw)
         fit, order, trend = arima_select_fit(
-            r,
+            r_model,
             d=0,
-            max_p=3,
-            max_q=3,
+            max_p=max(1, int(os.getenv("SARIMAX_MAX_P", "2"))),
+            max_q=max(1, int(os.getenv("SARIMAX_MAX_Q", "2"))),
             trends=("n","c"),
-            exog=X_std,
+            exog=X_std.reset_index(drop=True),
         )
         feat_cols = list(X_std.columns)
-        X_in_fit = X_std
+        X_in_fit = X_std.reset_index(drop=True)
     else:
         fit, order, trend = arima_select_fit(
-            r,
+            r_model,
             d=0,
-            max_p=3,
-            max_q=3,
+            max_p=max(1, int(os.getenv("SARIMAX_MAX_P", "2"))),
+            max_q=max(1, int(os.getenv("SARIMAX_MAX_Q", "2"))),
             trends=("n","c"),
             exog=None,
         )
@@ -301,9 +490,9 @@ def train_gap_model(symbol: str,
 
     # 3. đánh giá in-sample
     if use_exog:
-        y_pred_in = fit.predict(start=r.index[0], end=r.index[-1], exog=X_in_fit)
+        y_pred_in = fit.predict(start=0, end=len(r_model) - 1, exog=X_in_fit)
     else:
-        y_pred_in = fit.predict(start=r.index[0], end=r.index[-1])
+        y_pred_in = fit.predict(start=0, end=len(r_model) - 1)
 
     y_true = _safe_numeric(r)
     y_pred_in = _safe_numeric(y_pred_in)
@@ -313,9 +502,9 @@ def train_gap_model(symbol: str,
     aic_val  = float(fit.aic)
 
     # 4. one-step-ahead preview
-    endog_index = pd.DatetimeIndex(fit.model.data.row_labels).tz_localize(None)
-    last_idx = endog_index[-1]
+    last_idx = pd.Timestamp(r.index[-1]).tz_localize(None)
 
+    target_idx = pd.Timestamp(next_trading_day(last_idx.date()))
     X_next = None
     if use_exog and feat_cols:
         X_next = _build_exog_row_for_forecast(
@@ -324,6 +513,7 @@ def train_gap_model(symbol: str,
             feat_cols,
             add_index or ["VNINDEX","VN30"],
             scaler,
+            target_idx=target_idx,
         )
 
     fc = fit.get_forecast(steps=1, exog=X_next)
@@ -338,6 +528,7 @@ def train_gap_model(symbol: str,
 
     # 5. meta để lưu
     meta = {
+        "schema_version": MODEL_SCHEMA_VERSION,
         "symbol": sym,
         "order": list(order),
         "trend": trend,
@@ -346,7 +537,10 @@ def train_gap_model(symbol: str,
         "scaler": scaler,
         "train_len": int(len(r)),
         "timestamp": get_time_vn(),
-        "target": "gap_ret",
+        "last_train_date": pd.Timestamp(close_series.index[-1]).date().isoformat(),
+        "target": "next_session_close_to_close_log_return",
+        "signal_timing": "after_close_t_for_session_t_plus_1",
+        "forecast_target_date": target_idx.date().isoformat(),
         "add_index": add_index or ["VNINDEX","VN30"],
 
         "aic": aic_val,
@@ -356,6 +550,11 @@ def train_gap_model(symbol: str,
         "last_close": last_close,
         "ret_hat_next": ret_hat_next,
         "next_price_est": next_price_est,
+        "holdout": _holdout_metrics(
+            close_series,
+            X_raw=X_raw if use_exog else None,
+            test_size=int(os.getenv("MODEL_HOLDOUT_SIZE", "20")),
+        ),
     }
 
     # 6. lưu ra ổ đĩa
@@ -404,8 +603,13 @@ def forecast_gap(symbol: str, alpha: float = 0.10):
     """
     sym = symbol.upper()
 
+    current_prices = get_prices_df(sym, days=10)
+    if current_prices.empty:
+        raise ValueError(f"Không có dữ liệu giá hiện tại cho {sym}.")
+    latest_market_date = pd.Timestamp(current_prices.index[-1]).date()
+
     fit, meta = load_model_meta(sym, "gap")
-    if fit is None:
+    if fit is None or _model_is_stale(meta, latest_market_date):
         # train mới, nhận về (fit_trained, meta_trained, eval_report)
         fit_trained, meta_trained, _ = train_gap_model(sym, lookback_days=365)
         # sau train_gap_model đã save xuống ổ đĩa rồi,
@@ -422,14 +626,15 @@ def forecast_gap(symbol: str, alpha: float = 0.10):
 
     X1 = None
     if use_exog and feat_cols:
-        endog_index = pd.DatetimeIndex(fit.model.data.row_labels).tz_localize(None)
-        last_idx = endog_index[-1]
+        last_idx = pd.Timestamp(meta["last_train_date"])
+        target_idx = pd.Timestamp(next_trading_day(last_idx.date()))
         X1 = _build_exog_row_for_forecast(
             sym,
             last_idx,
             feat_cols,
             add_index,
             scaler,
+            target_idx=target_idx,
         )
 
     fc = fit.get_forecast(steps=1, exog=X1)
@@ -443,15 +648,28 @@ def forecast_gap(symbol: str, alpha: float = 0.10):
     arr = np.asarray(ci_df.values).reshape(-1)
     ci_lo, ci_hi = float(arr[0]), float(arr[-1])
 
-    df_px = get_prices_df(sym, days=5)
-    last_close = float(df_px["close"].iloc[-1])
+    last_close = float(current_prices["close"].iloc[-1])
 
+    trade_signal = signal_from_return(mean)
     return {
         "symbol": sym,
         "gap_ret_mean": mean,
         "gap_ret_ci": [ci_lo, ci_hi],
         "last_close": last_close,
+        "trade_signal": trade_signal,
+        "signal_threshold_return": _signal_threshold_return(),
+        "round_trip_cost_bps": float(
+            os.getenv("TRADING_ROUND_TRIP_COST_BPS", DEFAULT_ROUND_TRIP_COST_BPS)
+        ),
+        "signal_buffer_bps": float(
+            os.getenv("TRADING_SIGNAL_BUFFER_BPS", DEFAULT_SIGNAL_BUFFER_BPS)
+        ),
+        "target_definition": "next_session_close_to_close_log_return",
+        "signal_timing": "after_close_t_for_session_t_plus_1",
+        "forecast_target_date": next_trading_day(latest_market_date).isoformat(),
         "use_exog": use_exog,
+        "model_trained_through": meta.get("last_train_date"),
+        "model_schema_version": meta.get("schema_version"),
     }
 
 
@@ -467,13 +685,13 @@ def predict_tomorrow_full_exog(symbol: str, alpha: float = 0.10):
     gap = forecast_gap(sym, alpha=alpha)
     ampm = _fallback_am_pm()
 
-    open_band = _price_from_ret(
+    close_band = _price_from_ret(
         gap["last_close"],
         gap["gap_ret_mean"],
         gap["gap_ret_ci"],
     )
     am_band   = _price_from_ret(
-        open_band["px_mean"],
+        close_band["px_mean"],
         ampm["AM"]["ret_pred"],
         ampm["AM"]["ret_ci"],
     )
@@ -484,7 +702,7 @@ def predict_tomorrow_full_exog(symbol: str, alpha: float = 0.10):
     )
 
     last_close = float(gap["last_close"])
-    open_dir, open_gap_pct, open_conf = _dir_from_gap(last_close, open_band)
+    close_dir, close_gap_pct, close_conf = _dir_from_gap(last_close, close_band)
 
     target = pick_target_trading_day()
 
@@ -492,10 +710,21 @@ def predict_tomorrow_full_exog(symbol: str, alpha: float = 0.10):
         "target_day": target,
         "gap": gap,
         "ampm": ampm,
-        "bands": {"OPEN_am": open_band, "AM_px": am_band, "PM_px": pm_band},
-        "open_direction": open_dir,
-        "open_gap_pct": open_gap_pct,
-        "open_confidence": open_conf,
+        "bands": {
+            "NEXT_CLOSE": close_band,
+            # Backward-compatible alias; consumers should migrate to NEXT_CLOSE.
+            "OPEN_am": close_band,
+            "AM_px": am_band,
+            "PM_px": pm_band,
+        },
+        "close_direction": close_dir,
+        "close_return_pct": close_gap_pct,
+        "close_confidence": close_conf,
+        "trade_signal": gap["trade_signal"],
+        # Backward-compatible aliases for existing API/UI consumers.
+        "open_direction": close_dir,
+        "open_gap_pct": close_gap_pct,
+        "open_confidence": close_conf,
         "timestamp": get_time_vn(),
         "mode": "out_of_session"
     }
@@ -539,17 +768,16 @@ def predict_next_step_in_session(symbol: str, source: str = "VCI"):
         intraday = intraday[intraday.index <= now_naive]
 
         close = intraday["close"].astype("float64").dropna()
-        if len(close) >= 6:
-            ret = np.log(close/close.shift(1)).dropna()
-            N = min(5, len(ret))
-            mu = float(ret.tail(N).mean())
-            sig = float(ret.tail(N).std() or 0.0)
-
+        if len(close) >= 13:
+            trained = _fit_autoreg_returns(close, steps=3)
+            mu = float(trained["returns"][0])
+            sig = float(trained["sigma"])
             last_px = float(close.iloc[-1])
-            step1 = last_px * float(np.exp(mu))
-            path = [step1]
-            for _ in range(2):
-                path.append(path[-1] * float(np.exp(mu)))
+            path = []
+            px = last_px
+            for predicted_return in trained["returns"]:
+                px *= float(np.exp(predicted_return))
+                path.append(px)
             series_pred = pd.Series(path, index=pd.RangeIndex(1, 1+len(path), name="t+step"))
 
             direction = direction_from_return(mu)
@@ -565,18 +793,23 @@ def predict_next_step_in_session(symbol: str, source: str = "VCI"):
                 "last_px": last_px,
                 "path_pred": series_pred,
                 "source_used": "intraday",
+                "model": "AutoReg",
+                "model_lags": trained["lags"],
                 "mode": "in_session"
             }
 
-    df_daily = get_prices_df(sym, days=6)
+    df_daily = get_prices_df(sym, days=90)
     cls = df_daily["close"].dropna()
-    if len(cls) >= 3:
-        r = np.log(cls/cls.shift(1)).dropna()
-        mu = float(r.tail(3).mean())
-        sig = float(r.tail(3).std() or 0.0)
+    if len(cls) >= 13:
+        trained = _fit_autoreg_returns(cls, steps=3)
+        mu = float(trained["returns"][0])
+        sig = float(trained["sigma"])
         last_px = float(cls.iloc[-1])
-        step1 = last_px * float(np.exp(mu))
-        path = [step1, step1 * float(np.exp(mu)), step1 * float(np.exp(2*mu))]
+        path = []
+        px = last_px
+        for predicted_return in trained["returns"]:
+            px *= float(np.exp(predicted_return))
+            path.append(px)
         series_pred = pd.Series(path, index=pd.RangeIndex(1, 4, name="t+step"))
         direction = direction_from_return(mu)
         step_conf = "low"  # fallback
@@ -591,6 +824,8 @@ def predict_next_step_in_session(symbol: str, source: str = "VCI"):
             "last_px": last_px,
             "path_pred": series_pred,
             "source_used": "daily_fallback",
+            "model": "AutoReg",
+            "model_lags": trained["lags"],
             "mode": "in_session"
         }
 
@@ -608,33 +843,49 @@ def predict_next_session(symbol: str, alpha: float = 0.10, source: str = "VCI"):
 
     if next_sess == "AM":
         pack = predict_tomorrow_full_exog(sym, alpha=alpha)
-        open_band = pack["bands"]["OPEN_am"]
+        close_band = pack["bands"]["NEXT_CLOSE"]
         last_close = float(pack["gap"]["last_close"])
-        open_dir, open_gap_pct, open_conf = _dir_from_gap(last_close, open_band)
+        close_dir, close_return_pct, close_conf = _dir_from_gap(last_close, close_band)
         return {
             "mode": "next_session",
             "next_session": "AM",
             "target_day": target_day,
-            "open_band": open_band,
+            "close_band": close_band,
+            "close_direction": close_dir,
+            "close_return_pct": close_return_pct,
+            "close_confidence": close_conf,
+            "trade_signal": pack["gap"]["trade_signal"],
+            # Backward-compatible aliases for existing callers.
+            "open_band": close_band,
             "gap": pack["gap"],
-            "open_direction": open_dir,
-            "open_gap_pct": open_gap_pct,
-            "open_confidence": open_conf,
+            "open_direction": close_dir,
+            "open_gap_pct": close_return_pct,
+            "open_confidence": close_conf,
             "timestamp": get_time_vn(),
-            "note": "AM dùng band OPEN (ước lượng khoảng mở cửa)."
+            "note": "SARIMAX dự báo giá đóng cửa phiên kế tiếp; không phải giá mở cửa."
         }
 
     intraday = get_intraday_df(sym, source=source, interval="5m", days=1)
     base_px = None
+    trained = None
+    trained_from = "daily"
     if intraday is not None and not intraday.empty and "close" in intraday.columns:
         am_part = intraday[intraday.index.time <= dt.time(11, 30)]
-        if am_part is not None and not am_part.empty:
-            base_px = float(am_part["close"].dropna().iloc[-1])
-    if base_px is None:
-        df = get_prices_df(sym, days=5)
-        base_px = float(df["close"].dropna().iloc[-1])
+        if am_part is not None and len(am_part["close"].dropna()) >= 13:
+            prices = am_part["close"].dropna()
+            base_px = float(prices.iloc[-1])
+            trained = _fit_autoreg_returns(prices, steps=1)
+            trained_from = "intraday"
+    if trained is None:
+        df = get_prices_df(sym, days=90)
+        prices = df["close"].dropna()
+        base_px = float(prices.iloc[-1])
+        trained = _fit_autoreg_returns(prices, steps=1)
 
-    ampm = {"PM": {"ret_pred": 0.0, "ret_ci": [-0.005, 0.005]}}
+    ret_pred = float(trained["returns"][0])
+    sigma = max(float(trained["sigma"]), 1e-6)
+    z = 1.6448536269514722 if abs(alpha - 0.10) < 1e-9 else 1.959963984540054
+    ampm = {"PM": {"ret_pred": ret_pred, "ret_ci": [ret_pred - z*sigma, ret_pred + z*sigma]}}
     pm_band = _price_from_ret(base_px, ampm["PM"]["ret_pred"], ampm["PM"]["ret_ci"])
     pm_dir, pm_gap_pct, pm_conf = _dir_from_gap(base_px, pm_band)
 
@@ -646,9 +897,11 @@ def predict_next_session(symbol: str, alpha: float = 0.10, source: str = "VCI"):
         "pm_direction": pm_dir,
         "pm_gap_pct": pm_gap_pct,
         "pm_confidence": pm_conf,
-        "base_from": "AM_close" if (intraday is not None and not intraday.empty) else "last_close_daily",
+        "base_from": "AM_close" if trained_from == "intraday" else "last_close_daily",
+        "model": "AutoReg",
+        "model_lags": trained["lags"],
         "timestamp": get_time_vn(),
-        "note": "PM dựa trên giá kết thúc buổi sáng và band PM mặc định."
+        "note": "PM dùng AutoReg; ưu tiên dữ liệu buổi sáng, fallback dữ liệu ngày khi thiếu intraday."
     }
 
 def smart_predict(symbol: str, alpha: float = 0.10, source: str = "VCI"):
@@ -674,9 +927,25 @@ def smart_predict(symbol: str, alpha: float = 0.10, source: str = "VCI"):
     }
 
 
+def refresh_stale_models(symbols: List[str]) -> Dict[str, str]:
+    """Background-friendly refresh; freshness checks avoid unnecessary fitting."""
+    status: Dict[str, str] = {}
+    for raw_symbol in symbols:
+        sym = str(raw_symbol).strip().upper()
+        if not sym:
+            continue
+        try:
+            forecast_gap(sym)
+            status[sym] = "ready"
+        except Exception as exc:
+            status[sym] = f"error: {exc}"
+    return status
+
+
 __all__ = [
     "train_gap_model","forecast_gap",
     "predict_tomorrow_full_exog","smart_predict",
     "predict_next_session","predict_next_step_in_session",
-    "direction_from_return","pick_target_trading_day"
+    "direction_from_return","pick_target_trading_day","refresh_stale_models",
+    "signal_from_return"
 ]

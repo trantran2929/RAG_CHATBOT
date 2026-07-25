@@ -1,6 +1,7 @@
 import os
 import json
 import joblib
+import tempfile
 from typing import Tuple, Any, Dict
 
 MODELS_DIR = os.getenv("MODELS_DIR", "models")
@@ -28,9 +29,20 @@ def save_model_meta(symbol: str, tag: str, model: Any, meta: Dict) -> Tuple[str,
       - dự báo bước tới (ret_hat_next, next_price_est)
     """
     mpath, jpath = _paths(symbol, tag)
-    joblib.dump(model, mpath)
-    with open(jpath, "w", encoding="utf-8") as f:
-        json.dump(meta, f, ensure_ascii=False, indent=2)
+    model_fd, model_tmp = tempfile.mkstemp(dir=MODELS_DIR, suffix=".pkl.tmp")
+    meta_fd, meta_tmp = tempfile.mkstemp(dir=MODELS_DIR, suffix=".json.tmp")
+    os.close(model_fd)
+    os.close(meta_fd)
+    try:
+        joblib.dump(model, model_tmp)
+        with open(meta_tmp, "w", encoding="utf-8") as f:
+            json.dump(meta, f, ensure_ascii=False, indent=2)
+        os.replace(model_tmp, mpath)
+        os.replace(meta_tmp, jpath)
+    finally:
+        for tmp in (model_tmp, meta_tmp):
+            if os.path.exists(tmp):
+                os.remove(tmp)
     return mpath, jpath
 
 
@@ -43,7 +55,10 @@ def load_model_meta(symbol: str, tag: str) -> Tuple[Any, Dict]:
     if not (os.path.exists(mpath) and os.path.exists(jpath)):
         return None, None
 
-    model = joblib.load(mpath)
-    with open(jpath, "r", encoding="utf-8") as f:
-        meta = json.load(f)
-    return model, meta
+    try:
+        model = joblib.load(mpath)
+        with open(jpath, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+        return model, meta
+    except (OSError, ValueError, EOFError, json.JSONDecodeError):
+        return None, None

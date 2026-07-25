@@ -18,18 +18,22 @@ from functools import wraps
 from typing import Optional, Iterable, List, Dict
 import time
 import re
+import json
+import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytz
 
-from vnstock import Quote, Trading, Screener
+from vnstock import Quote, Trading
 from modules.api.time_api import get_now
 
 VN_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 DATE_FMT = "%d-%m-%Y"
 DATETIME_FMT = "%d-%m-%Y %H:%M:%S"
 MIN_YEAR = 2005
+STOCK_PRICE_MULTIPLIER = 1000.0
 
 
 def get_time_vn() -> str:
@@ -80,6 +84,42 @@ def _sanitize_symbol(symbol: str) -> str:
 def _validate_symbol(symbol: str):
     if not (3 <= len(symbol) <= 10):
         raise ValueError(f"Symbol không hợp lệ sau sanitize: {repr(symbol)}")
+
+
+def _normalize_price_board_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize both legacy MultiIndex and current flat Vnstock columns."""
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    out = df.copy()
+    normalized = []
+    for col in out.columns:
+        parts = col if isinstance(col, tuple) else (col,)
+        name = "_".join(
+            str(part).strip().lower()
+            for part in parts
+            if str(part).strip() and str(part).lower() != "nan"
+        )
+        normalized.append(re.sub(r"[^a-z0-9]+", "_", name).strip("_"))
+    out.columns = normalized
+    return out
+
+
+def _first_value(row: dict, *keys, default=None):
+    for key in keys:
+        value = row.get(key)
+        if value is not None and not pd.isna(value):
+            return value
+    return default
+
+
+def _stock_prices_to_vnd(df: pd.DataFrame) -> pd.DataFrame:
+    """VNStock history quotes equities in thousand VND; expose equities in VND."""
+    out = df.copy()
+    for col in ("open", "high", "low", "close"):
+        if col in out.columns:
+            out[col] = pd.to_numeric(out[col], errors="coerce") * STOCK_PRICE_MULTIPLIER
+    return out
 
 
 def _normalize_history_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -248,17 +288,24 @@ def get_stock_quote(symbol: str) -> dict:
         df = trading.price_board(symbols_list=[symbol])
         if df is None or df.empty:
             raise ValueError("Không có dữ liệu cổ phiếu.")
-        df.columns = [f"{a}_{b}" for a, b in df.columns]
+        df = _normalize_price_board_columns(df)
         row = df.iloc[0].to_dict()
 
-        price = row.get("match_match_price")
-        ref = row.get("match_reference_price") or row.get("listing_ref_price")
-        ceil = row.get("match_ceiling_price") or row.get("listing_ceiling")
-        floor = row.get("match_floor_price") or row.get("listing_floor")
-        vol = (
-            row.get("match_accumulated_volume")
-            or row.get("match_match_vol")
-            or 0
+        price = _first_value(row, "close_price", "match_match_price")
+        ref = _first_value(
+            row, "reference_price", "match_reference_price", "listing_ref_price"
+        )
+        open_price = _first_value(
+            row, "open_price", "match_open_price", "listing_open_price"
+        )
+        high_price = _first_value(
+            row, "high_price", "match_high_price", "listing_high_price"
+        )
+        low_price = _first_value(
+            row, "low_price", "match_low_price", "listing_low_price"
+        )
+        vol = _first_value(
+            row, "total_trades", "match_accumulated_volume", "match_match_vol", default=0
         )
 
         if not price or price == 0:
@@ -272,9 +319,9 @@ def get_stock_quote(symbol: str) -> dict:
         return {
             "symbol": symbol,
             "price": float(price),
-            "open": float(ref) if ref is not None else None,
-            "high": float(ceil) if ceil is not None else None,
-            "low": float(floor) if floor is not None else None,
+            "open": float(open_price) if open_price is not None else None,
+            "high": float(high_price) if high_price is not None else None,
+            "low": float(low_price) if low_price is not None else None,
             "change": round(chg, 2),
             "percent_change": round(pct, 2),
             "volume": int(vol or 0),
@@ -293,6 +340,7 @@ def get_stock_quote(symbol: str) -> dict:
             start = end - timedelta(days=7)
             df = _quote_history_with_fallback(symbol, _ymd(start), _ymd(end))
             if df is not None and not df.empty:
+                df = _stock_prices_to_vnd(df)
                 last = df.iloc[-1]
                 op = float(last.get("open", 0) or 0)
                 cl = float(last.get("close", 0) or 0)
@@ -332,33 +380,38 @@ def get_top_stocks(limit: int = 10, direction: str = "up") -> list:
     direction: "up" lấy top tăng %, "down" lấy top giảm % (âm nhiều nhất).
     """
     try:
-        screener_df = Screener().stock(
-            params={"exchangeName": "HOSE,HNX,UPCOM"}, limit=3000
+        symbols_path = Path(os.getenv("TICKER_CACHE_PATH", "data/symbols.json"))
+        symbols = json.loads(symbols_path.read_text(encoding="utf-8"))
+        symbols = [str(s).strip().upper() for s in symbols if str(s).strip()]
+        if not symbols:
+            raise ValueError("Danh sách mã chứng khoán trống.")
+
+        screener_df = Trading().price_board(symbols_list=symbols)
+        screener_df = _normalize_price_board_columns(screener_df)
+        if screener_df.empty or "percent_change" not in screener_df.columns:
+            raise ValueError("Bảng giá không có cột percent_change.")
+
+        screener_df["percent_change"] = pd.to_numeric(
+            screener_df["percent_change"], errors="coerce"
         )
-        if screener_df is None or screener_df.empty:
-            raise ValueError("Không có dữ liệu sàng lọc.")
-        growth_col = next(
-            (c for c in screener_df.columns if "growth" in c.lower()), None
+        screener_df["close_price"] = pd.to_numeric(
+            screener_df.get("close_price"), errors="coerce"
         )
-        if not growth_col:
-            raise ValueError("Không tìm thấy cột tăng trưởng giá.")
-        screener_df[growth_col] = (
-            pd.to_numeric(screener_df[growth_col], errors="coerce")
-            .astype(float)
-        )
+        screener_df = screener_df.dropna(subset=["percent_change", "close_price"])
+        screener_df = screener_df[screener_df["close_price"] > 0]
 
         ascending = True if direction == "down" else False
-        top_df = screener_df.sort_values(growth_col, ascending=ascending).head(limit)
+        top_df = screener_df.sort_values("percent_change", ascending=ascending).head(limit)
 
         out = []
         for _, row in top_df.iterrows():
             out.append(
                 {
-                    "symbol": (row.get("ticker") or row.get("symbol") or "").upper(),
+                    "symbol": str(row.get("symbol") or row.get("ticker") or "").upper(),
                     "exchange": row.get("exchange", "") or "",
-                    "price": row.get("price_near_realtime") or row.get("close_price"),
-                    "pct_change": round(float(row[growth_col] or 0.0), 2),
-                    "volume": int(row.get("avg_trading_value_10d", 0) or 0),
+                    "price": float(row.get("close_price") or 0),
+                    "pct_change": round(float(row.get("percent_change") or 0.0), 2),
+                    "volume": int(row.get("total_trades", 0) or 0),
                     "timestamp": get_time_vn(),
                 }
             )
@@ -400,6 +453,7 @@ def get_history_prices(symbol: str, days: int = 7) -> dict:
         end = _today_vn()
         start = end - timedelta(days=days + 14)
         df = _quote_history_with_fallback(symbol, _ymd(start), _ymd(end))
+        df = _stock_prices_to_vnd(df)
         if df is None or df.empty:
             raise ValueError("Không có dữ liệu lịch sử.")
 
@@ -477,6 +531,7 @@ def get_price_at_date(
     try:
         df = _quote_history_with_fallback(sym, _ymd(start_dt), _ymd(end_dt))
         df = _normalize_history_df(df)
+        df = _stock_prices_to_vnd(df)
         if df is None or df.empty:
             raise ValueError("Không có dữ liệu lịch sử quanh ngày yêu cầu.")
     except Exception as e:
@@ -545,9 +600,9 @@ def get_history_df_vnstock(
 
     df = _quote_history_with_fallback(symbol, _ymd(start_dt), _ymd(end_dt))
     df = _normalize_history_df(df)
+    df = _stock_prices_to_vnd(df)
     if df.empty:
         raise ValueError(f"VNStock: không có dữ liệu hợp lệ cho {symbol} (normalize)")
-    df = df.asfreq("D").ffill()
     return df[["open", "high", "low", "close", "volume"]]
 
 
@@ -558,7 +613,7 @@ def get_prices_df(symbol: str, days: int = 365) -> pd.DataFrame:
     df = get_history_df_vnstock(symbol, start=_ymd(start), end=_ymd(end))
     today_ict = _today_vn().date()
     df = df[df.index.date <= today_ict]
-    return df.tail(days).asfreq("D").ffill()[["open", "high", "low", "close", "volume"]]
+    return df.tail(days)[["open", "high", "low", "close", "volume"]]
 
 
 @TTLCache(ttl_seconds=300)

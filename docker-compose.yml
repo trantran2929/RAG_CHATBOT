@@ -57,6 +57,7 @@ services:
       context: .
       dockerfile: modules/ingestion/Dockerfile
     container_name: ingestion
+    gpus: all
     depends_on:
       - redis
       - qdrant
@@ -68,9 +69,23 @@ services:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - HF_TOKEN=${HF_TOKEN}
+      - PYTHONUNBUFFERED=1
       - QDRANT_COLLECTION=cafef_articles
-      - INGEST_INTERVAL=3600
+      - INGEST_INTERVAL=900
       - CRAWL_MAX_PAGES=1
+      - MAX_NEWS_AGE_DAYS=3
+      - MODELS_DIR=/app/models
+      - MODEL_MAX_STALENESS_DAYS=0
+      - MODEL_HOLDOUT_SIZE=20
+      - SARIMAX_MAX_P=2
+      - SARIMAX_MAX_Q=2
+      - TRADING_ROUND_TRIP_COST_BPS=35
+      - TRADING_SIGNAL_BUFFER_BPS=15
+      - ML_RETRAIN_AFTER_INGEST=1
+      - ML_RETRAIN_SYMBOLS=FPT,HPG,VCB,SHS,THU
+    volumes:
+      - ./modules:/app/modules
+      - ./models:/app/models
     restart: unless-stopped
 
 volumes:

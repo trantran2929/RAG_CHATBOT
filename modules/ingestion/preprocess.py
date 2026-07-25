@@ -127,7 +127,7 @@ def _to_time_ts(time_str: str) -> int:
     Nếu parse fail -> dùng now (UTC) (an toàn cho demo).
     """
     try:
-        ts = pd.to_datetime(time_str, format="%d-%m-%Y %H:%M:%S", errors="raise")
+        ts = pd.to_datetime(time_str, dayfirst=True, errors="raise")
         ts = ts.tz_localize("Asia/Ho_Chi_Minh").tz_convert("UTC")
         return int(ts.timestamp())
     except Exception:
@@ -158,7 +158,10 @@ def preprocess_articles(articles: List[Dict], max_words: int = 400) -> List[Dict
         if not chunks:
             continue
         for idx, ch in enumerate(chunks):
-            base = f"{a.get('url','')}_{title}_{time_ts}_{idx}"
+            # Stable across crawl cycles. Relative labels such as "1 giờ trước"
+            # change their parsed timestamp every run and must not affect IDs.
+            article_key = str(a.get("url") or a.get("id") or title).strip()
+            base = f"{a.get('source','cafef')}|{article_key}|chunk:{idx}"
             pid = hashlib.md5(base.encode("utf-8")).hexdigest()
 
             out.append({

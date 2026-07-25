@@ -11,6 +11,13 @@ streamlit
 # Utils
 langdetect
 python-dotenv
+requests
+numpy
+pandas
+pytz
+holidays
+joblib
+matplotlib
 huggingface-hub
 
 beautifulsoup4
@@ -20,11 +27,13 @@ rank_bm25
 unsloth
 langgraph
 underthesea
-vnstock
+vnstock==3.4.0
 IPython
 sentence_transformers
 flask
 statsmodels
 unidecode
+langchain
+langchain-openai
 
 # pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128

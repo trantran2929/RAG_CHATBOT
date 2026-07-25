@@ -55,7 +55,7 @@ def _infer_sentiment_batch(batch_docs: List[Dict]) -> List[Dict]:
         return [_neutral_pack() for _ in batch_docs]
 
 def _stable_point_id(d: Dict, j: int) -> str:
-    """Ưu tiên d['id']; nếu thiếu, sinh id ổn định từ url|title|time_ts|j."""
+    """Ưu tiên d['id']; nếu thiếu, sinh ID không phụ thuộc thời gian crawl."""
     import hashlib
     sid = d.get("id")
     if sid:
@@ -64,8 +64,6 @@ def _stable_point_id(d: Dict, j: int) -> str:
     m.update((d.get("url", "") or "").encode("utf-8"))
     m.update(b"|")
     m.update((d.get("title", "") or "").encode("utf-8"))
-    m.update(b"|")
-    m.update(str(int(d.get("time_ts", 0))).encode("utf-8"))
     m.update(b"|")
     m.update(str(j).encode("utf-8"))
     return m.hexdigest()
@@ -170,7 +168,7 @@ def load_to_vector_db(
                 )
             )
 
-        qdrant_services.client.upsert(collection_name=coll, points=points)
+        qdrant_services.client.upsert(collection_name=coll, points=points, wait=True)
         total += len(points)
 
     print(f"[Loader] Upserted {total} points → '{coll}'")

@@ -1,12 +1,29 @@
 import numpy as np
 import pandas as pd
 import pytz
+import os
 from typing import List, Optional
-from qdrant_client import models
-
-from modules.utils.services import qdrant_services  # client Qdrant chia sẻ trong project
+from types import SimpleNamespace
+from qdrant_client import QdrantClient, models
 
 ICT = pytz.timezone("Asia/Ho_Chi_Minh")
+_QDRANT_SERVICES = None
+
+
+def _get_qdrant_services():
+    """Lightweight payload client; does not initialize embedder/reranker/LLM."""
+    global _QDRANT_SERVICES
+    if _QDRANT_SERVICES is None:
+        client = QdrantClient(
+            host=os.getenv("QDRANT_HOST", "localhost"),
+            port=int(os.getenv("QDRANT_PORT", "6333")),
+            timeout=float(os.getenv("QDRANT_TIMEOUT", "10")),
+        )
+        _QDRANT_SERVICES = SimpleNamespace(
+            client=client,
+            collection_name=os.getenv("QDRANT_COLLECTION", "cafef_articles"),
+        )
+    return _QDRANT_SERVICES
 
 
 def _day_from_epoch_s(ts) -> pd.Timestamp:
@@ -86,6 +103,7 @@ def _scroll_all(
     (không bị giới hạn top-k như search),
     để gom tin trong khoảng thời gian.
     """
+    qdrant_services = _get_qdrant_services()
     all_pts = []
     next_page = None
 
@@ -171,6 +189,7 @@ def build_news_features(
      idx_VNINDEX_news_count, ... (nếu add_index có VNINDEX),
      ...]
     """
+    qdrant_services = _get_qdrant_services()
     coll = collection or getattr(qdrant_services, "collection_name", "cafef_articles")
     sym = symbol.upper()
     add_index = (add_index or [])

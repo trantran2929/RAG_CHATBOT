@@ -1,5 +1,10 @@
-from modules.api.time_api import format_full, get_now
-from modules.api.weather_api import get_weather, normalize_city_name
+from modules.api.time_api import answer_time_query, get_now
+from modules.api.weather_api import (
+    get_weather,
+    get_weather_forecast,
+    normalize_city_name,
+    resolve_weather_date,
+)
 from modules.api.stock_api import (
     format_market_summary,
     get_stock_quote,
@@ -168,7 +173,8 @@ def _extract_news_keyword_from_query(
 
 
 def route_intent(state: GlobalState) -> GlobalState:
-    user_query = (state.user_query or "").lower()
+    effective_query = getattr(state, "corrected_query", "") or state.user_query or ""
+    user_query = effective_query.lower()
     intent = getattr(state, "intent", "rag")
     tickers = getattr(state, "tickers", [])
     symbol = tickers[0] if tickers else None
@@ -198,7 +204,7 @@ def route_intent(state: GlobalState) -> GlobalState:
             if start_day is not None and start_day == today:
                 # 🔹 Lấy keyword: SBT, Agris, ...
                 news_keyword = _extract_news_keyword_from_query(
-                    state.user_query or "",
+                    effective_query,
                     tickers=getattr(state, "tickers", []),
                 )
 
@@ -258,7 +264,7 @@ def route_intent(state: GlobalState) -> GlobalState:
 
         # 2) Ngược lại: lịch sử N ngày gần đây
         need_hist, days = processor_instance.resolve_history_request(
-            text=state.user_query,
+            text=effective_query,
             time_filter=getattr(state, "time_filter", None),
             default_days=30,
         )
@@ -290,7 +296,7 @@ def route_intent(state: GlobalState) -> GlobalState:
         # Nếu câu hỏi mang tính "lịch sử" (ngày trước / hôm qua / ...) nhưng KHÔNG có mã
         # -> hỏi lại để làm rõ mã, không nên tóm tắt thị trường / RAG.
         need_hist, _ = processor_instance.resolve_history_request(
-            text=state.user_query,
+            text=effective_query,
             time_filter=getattr(state, "time_filter", None),
             default_days=30,
         )
@@ -349,7 +355,7 @@ def route_intent(state: GlobalState) -> GlobalState:
             return state
 
         # Phân loại kiểu dự báo theo câu hỏi user
-        fmode = _detect_forecast_mode(state.user_query or "")
+        fmode = _detect_forecast_mode(effective_query)
 
         if fmode == "step":
             # Dự đoán bước tiếp theo trong phiên
@@ -368,51 +374,51 @@ def route_intent(state: GlobalState) -> GlobalState:
 
     # Weather
     if intent == "weather":
-        match = re.search(r"thời tiết\s+(?:ở\s+)?(.+)", user_query)
+        match = re.search(r"thời tiết\s+(.+)", user_query)
         city_raw = match.group(1).strip() if match else "Hà Nội"
         city = normalize_city_name(city_raw)
-        weather = get_weather(city, "Việt Nam")
+        try:
+            target_date = resolve_weather_date(user_query)
+        except ValueError:
+            target_date = get_now().date()
+
+        today = get_now().date()
+        if target_date == today:
+            weather = get_weather(city_raw, "VN")
+        else:
+            weather = get_weather_forecast(city_raw, target_date, "VN")
 
         state.route_to = "api"
-        state.api_type = "weather"
+        state.api_type = "weather_forecast" if target_date != today else "weather"
         if "error" not in weather:
-            state.api_response = (
-                f"🌤️ Thời tiết tại **{weather['location']}**: "
-                f"{weather['temp']}°C, {weather['desc']}."
-            )
+            if weather.get("kind") == "forecast":
+                state.api_response = (
+                    f"🌤️ Dự báo thời tiết tại **{weather['location']}** ngày "
+                    f"**{weather['date']}**: {weather['desc']}, "
+                    f"nhiệt độ khoảng {weather['temp_min']:.1f}–{weather['temp_max']:.1f}°C, "
+                    f"xác suất mưa cao nhất {weather['rain_probability']}%."
+                )
+            else:
+                state.api_response = (
+                    f"🌤️ Thời tiết tại **{weather['location']}**: "
+                    f"{weather['temp']}°C, {weather['desc']}, "
+                    f"độ ẩm {weather.get('humidity', 'N/A')}%."
+                )
+            if weather.get("geocoder_source") == "OpenStreetMap":
+                state.api_response += "  \n📍 Địa danh: © OpenStreetMap contributors."
         else:
-            state.api_response = "⚠️ Không lấy được dữ liệu thời tiết."
+            state.api_response = f"⚠️ {weather['error']}"
         state.llm_status = "route_weather"
         state.add_debug("route", "weather_api")
+        state.add_debug("weather_city", city)
+        state.add_debug("weather_target_date", target_date.isoformat())
         return state
 
     # Time
     if intent == "time":
-        q = (state.user_query or "").lower().strip()
+        q = effective_query.lower().strip()
         now_dt = get_now()
-        hhmmss = now_dt.strftime("%H:%M:%S")
-        date_text = now_dt.strftime("%d/%m/%Y")
-
-        if "còn bao lâu" in q and ("cuối năm" in q or "hết năm" in q):
-            end_dt = now_dt.replace(
-                month=12, day=31, hour=23, minute=59, second=59
-            )
-            diff = end_dt - now_dt
-            days_left = diff.days
-            hours_left = diff.seconds // 3600
-            mins_left = (diff.seconds % 3600) // 60
-            reply = (
-                f"Còn khoảng {days_left} ngày "
-                f"{hours_left} giờ {mins_left} phút nữa là hết năm."
-            )
-        elif (
-            "ngày bao nhiêu" in q
-            or "hôm nay là ngày" in q
-            or "hôm nay ngày" in q
-        ):
-            reply = f"Hôm nay là {date_text}."
-        else:
-            reply = f"Hiện tại là {hhmmss}, {date_text}."
+        reply = answer_time_query(q, now=now_dt)
 
         state.route_to = "api"
         state.api_type = "time"

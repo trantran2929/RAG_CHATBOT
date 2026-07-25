@@ -16,12 +16,16 @@ class GlobalState:
     # Thời điểm query (timestamp)
     timestamp: float = field(default_factory=time.time)
     user_query: str = ""
+    corrected_query: str = ""
     processed_query: str = ""
     lang: str = "unknown"
     # Chế độ trả lời (general, math_step_by_step, translation, code_generation)
     mode: str = "general"
     role: str = ""
     intent: str = "rag"     # “time”, “weather”, “stock”, “news”, “rag”, …
+    intent_confidence: float = 0.0
+    semantic_parser_used: bool = False
+    semantic_parse: Dict[str, Any] = field(default_factory=dict)
     route_to: Optional[str] = None  # “api”, “rag”, “multi_agent”...
     route_hint: Optional[str] = None     #gợi ý route do Processor phát hiện
     route: str = "rag"                     # “RAG”, “API”, hoặc “Greeting”

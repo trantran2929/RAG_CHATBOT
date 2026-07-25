@@ -1,8 +1,6 @@
 from typing import Dict, Any, Optional
 
-from modules.ML.pipeline import smart_predict, predict_next_session, direction_from_return
-from modules.api.time_api import get_now
-from modules.api.stock_api import DATE_FMT
+from modules.ML.pipeline import smart_predict, predict_next_session
 
 
 def _safe_get(d: Dict, key: str, default=None):
@@ -10,6 +8,84 @@ def _safe_get(d: Dict, key: str, default=None):
         return d.get(key, default)
     except Exception:
         return default
+
+
+CONFIDENCE_LABELS = {
+    "high": "cao",
+    "medium": "trung bình",
+    "low": "thấp",
+    "uncertain": "chưa chắc chắn",
+    "up_confident": "khá chắc chắn theo hướng tăng",
+    "down_confident": "khá chắc chắn theo hướng giảm",
+}
+
+
+def _confidence_label(value: Any) -> str:
+    raw = str(value or "uncertain").strip()
+    return CONFIDENCE_LABELS.get(raw, raw)
+
+
+def _valid_band(band: Any) -> Optional[Dict[str, float]]:
+    if not isinstance(band, dict):
+        return None
+    try:
+        mean = float(band["px_mean"])
+        low = float(band["px_lo"])
+        high = float(band["px_hi"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if low > high:
+        low, high = high, low
+    return {"px_mean": mean, "px_lo": low, "px_hi": high}
+
+
+def _model_note(pack: Dict[str, Any]) -> str:
+    gap = pack.get("gap") if isinstance(pack.get("gap"), dict) else {}
+    trained_through = gap.get("model_trained_through")
+    model = pack.get("model")
+    source = pack.get("base_from") or pack.get("source_used")
+    parts = []
+    if trained_through:
+        parts.append(f"model học tới phiên {trained_through}")
+    if model:
+        parts.append(str(model))
+    if source == "daily_fallback":
+        parts.append("fallback dữ liệu ngày do thiếu intraday")
+    elif source == "last_close_daily":
+        parts.append("dùng dữ liệu ngày do thiếu intraday buổi sáng")
+    return f"- Nguồn mô hình: {', '.join(parts)}." if parts else ""
+
+
+def _format_intraday_pack(sym: str, pack: Dict[str, Any]) -> str:
+    if not isinstance(pack, dict) or pack.get("mode") != "in_session":
+        return ""
+    if pack.get("next_step_dir") is None:
+        detail = pack.get("error") or "không đủ dữ liệu đầu vào"
+        return f"⚠️ Chưa thể dự báo nội phiên cho **{sym}**: {detail}"
+
+    confidence = _confidence_label(pack.get("step_confidence"))
+    lines = [
+        f"📈 Dự báo ngắn hạn nội phiên cho **{sym}** ({pack.get('session', 'AM/PM')}):",
+        f"- Xu hướng kế tiếp: **{pack['next_step_dir']}** (độ tin cậy {confidence}).",
+    ]
+    last_px = pack.get("last_px")
+    if isinstance(last_px, (int, float)) and last_px > 0:
+        lines.append(f"- Giá gần nhất: {float(last_px):,.0f} VNĐ.")
+    path = pack.get("path_pred")
+    if path is not None and hasattr(path, "tolist"):
+        values = [float(v) for v in path.tolist() if v is not None]
+        if values:
+            lines.append(
+                "- Quỹ đạo 3 bước tham khảo: "
+                + ", ".join(f"{value:,.0f} VNĐ" for value in values[:3]) + "."
+            )
+    note = _model_note(pack)
+    if note:
+        lines.append(note)
+    if pack.get("error"):
+        lines.append(f"- Lưu ý dữ liệu: {pack['error']}")
+    lines.append("⚠️ Đây là ước lượng thống kê, không phải khuyến nghị mua/bán.")
+    return "\n".join(lines)
 
 
 # ============================================================
@@ -31,12 +107,15 @@ def _format_next_session_brief(sym: str, pack: Dict[str, Any]) -> str:
     # Case: gói next_session (predict_next_session)
     if mode == "next_session" and next_sess in ("AM", "PM"):
         if next_sess == "AM":
-            open_dir = pack.get("open_direction")
-            open_gap_pct = pack.get("open_gap_pct")
-            if open_dir is not None and open_gap_pct is not None:
+            close_dir = pack.get("close_direction", pack.get("open_direction"))
+            close_return_pct = pack.get(
+                "close_return_pct", pack.get("open_gap_pct")
+            )
+            if close_dir is not None and close_return_pct is not None:
                 return (
-                    f"🔮 Phiên sáng (AM) sắp tới của {sym} ({target_day}): "
-                    f"khả năng **{open_dir}** khoảng {open_gap_pct:+.2f}% (tham khảo)."
+                    f"🔮 Phiên kế tiếp của {sym} ({target_day}): giá đóng cửa "
+                    f"có khả năng **{close_dir}** khoảng "
+                    f"{close_return_pct:+.2f}% (tham khảo)."
                 )
         else:  # PM
             pm_dir = pack.get("pm_direction")
@@ -74,33 +153,43 @@ def _format_next_session_verbose(sym: str, pack: Dict[str, Any]) -> str:
     # 1) Gói next_session chuẩn
     if mode == "next_session" and next_sess in ("AM", "PM"):
         if next_sess == "AM":
-            band = pack.get("open_band", {}) or {}
-            px_mean = band.get("px_mean")
-            px_lo = band.get("px_lo")
-            px_hi = band.get("px_hi")
-            direction = pack.get("open_direction", "dao động nhẹ")
-            gap_pct = pack.get("open_gap_pct", 0.0)
-            conf = pack.get("open_confidence", "uncertain")
+            band = _valid_band(pack.get("close_band", pack.get("open_band")))
+            if band is None:
+                return ""
+            px_mean, px_lo, px_hi = band["px_mean"], band["px_lo"], band["px_hi"]
+            direction = pack.get(
+                "close_direction", pack.get("open_direction", "dao động nhẹ")
+            )
+            gap_pct = pack.get("close_return_pct", pack.get("open_gap_pct", 0.0))
+            conf = _confidence_label(
+                pack.get("close_confidence", pack.get("open_confidence"))
+            )
+            model_note = _model_note(pack)
+            signal = pack.get("trade_signal", "NO_TRADE")
 
             msg = [
-                f"📅 Phiên sáng (AM) sắp tới của {sym} ({target_day}):",
-                f"- Giá mở cửa dự kiến khoảng {px_mean:,.2f} VNĐ "
+                f"📅 Phiên giao dịch kế tiếp của {sym} ({target_day}):",
+                f"- Giá đóng cửa dự kiến khoảng {px_mean:,.2f} VNĐ "
                 f"(dải {px_lo:,.2f} ~ {px_hi:,.2f}).",
                 f"- Dự kiến {direction} khoảng {gap_pct:+.2f}%.",
+                f"- Tín hiệu sau ngưỡng chi phí: **{signal}**.",
                 f"- Mức độ tự tin mô hình: {conf}.",
+                *([model_note] if model_note else []),
+                "\n",
                 "⚠️ Đây chỉ là ước lượng dựa trên tin tức & hành vi giá gần nhất,"
                 " không phải khuyến nghị đầu tư."
             ]
             return "\n".join(msg)
 
         if next_sess == "PM":
-            band = pack.get("pm_band", {}) or {}
-            px_mean = band.get("px_mean")
-            px_lo = band.get("px_lo")
-            px_hi = band.get("px_hi")
+            band = _valid_band(pack.get("pm_band"))
+            if band is None:
+                return ""
+            px_mean, px_lo, px_hi = band["px_mean"], band["px_lo"], band["px_hi"]
             direction = pack.get("pm_direction", "dao động nhẹ")
             gap_pct = pack.get("pm_gap_pct", 0.0)
-            conf = pack.get("pm_confidence", "uncertain")
+            conf = _confidence_label(pack.get("pm_confidence"))
+            model_note = _model_note(pack)
 
             msg = [
                 f"📅 Phiên chiều (PM) kế tiếp của {sym} ({target_day}):",
@@ -108,29 +197,43 @@ def _format_next_session_verbose(sym: str, pack: Dict[str, Any]) -> str:
                 f"(dải {px_lo:,.2f} ~ {px_hi:,.2f}).",
                 f"- Khuynh hướng {direction} khoảng {gap_pct:+.2f}%.",
                 f"- Độ tin cậy: {conf}.",
-                "⚠️ Đây là thông tin tham khảo, không phải lời khuyên giao dịch."
+                *([model_note] if model_note else []),
+                "\n ⚠️ Đây là thông tin tham khảo, không phải lời khuyên giao dịch."
             ]
             return "\n".join(msg)
 
     # 2) Gói out_of_session (predict_tomorrow_full_exog)
     if mode == "out_of_session":
-        open_band = (pack.get("bands", {}) or {}).get("OPEN_am", {}) or {}
-        px_mean = open_band.get("px_mean")
-        px_lo = open_band.get("px_lo")
-        px_hi = open_band.get("px_hi")
-        open_dir = pack.get("open_direction", "dao động nhẹ")
-        open_gap_pct = pack.get("open_gap_pct", 0.0)
-        conf = pack.get("open_confidence", "uncertain")
+        bands = pack.get("bands", {}) or {}
+        close_band = _valid_band(bands.get("NEXT_CLOSE", bands.get("OPEN_am")))
+        if close_band is None:
+            return ""
+        px_mean, px_lo, px_hi = (
+            close_band["px_mean"],
+            close_band["px_lo"],
+            close_band["px_hi"],
+        )
+        close_dir = pack.get(
+            "close_direction", pack.get("open_direction", "dao động nhẹ")
+        )
+        close_return_pct = pack.get(
+            "close_return_pct", pack.get("open_gap_pct", 0.0)
+        )
+        conf = _confidence_label(
+            pack.get("close_confidence", pack.get("open_confidence"))
+        )
         target_day = pack.get("target_day")
+        signal = pack.get("trade_signal", "NO_TRADE")
 
         msg = [
             f"📅 Phiên tiếp theo của {sym} ({target_day}):",
-            f"- Mở cửa dự kiến quanh {px_mean:,.2f} VNĐ "
+            f"- Giá đóng cửa dự kiến quanh {px_mean:,.2f} VNĐ "
             f"(dải {px_lo:,.2f} ~ {px_hi:,.2f}).",
-            f"- Xu hướng khả năng {open_dir} khoảng {open_gap_pct:+.2f}%",
+            f"- Xu hướng khả năng {close_dir} khoảng {close_return_pct:+.2f}%",
             "  so với giá đóng cửa gần nhất.",
+            f"- Tín hiệu sau ngưỡng chi phí: **{signal}**.",
             f"- Mức tự tin mô hình: {conf}.",
-            "⚠️ Đây chỉ là mô phỏng thống kê, KHÔNG phải khuyến nghị mua/bán."
+            "\n ⚠️ Đây chỉ là mô phỏng thống kê, KHÔNG phải khuyến nghị mua/bán."
         ]
         return "\n".join(msg)
 
@@ -226,32 +329,13 @@ def format_forecast_text(
         + Chỉ hiển thị dự báo cho phiên giao dịch kế tiếp.
     """
     sym = symbol.upper()
+    if not isinstance(pack, dict):
+        return f"⚠️ Chưa có dữ liệu dự báo hợp lệ cho **{sym}**."
     mode = pack.get("mode", "")
 
     # 1. ĐANG TRONG PHIÊN → bước kế tiếp + phiên kế tiếp
     if mode == "in_session":
-        session = pack.get("session", "AM/PM")
-        dir_ = pack.get("next_step_dir") or "khó xác định"
-        conf = pack.get("step_confidence", "low")
-        last_px = pack.get("last_px", None)
-        path_pred = pack.get("path_pred", None)
-
-        msg = [
-            f"📈 Dự báo ngắn hạn nội phiên cho {sym} ({session}):",
-            f"- Xu hướng kế tiếp: **{dir_}** (độ tin cậy {conf})."
-        ]
-        if last_px:
-            msg.append(f"- Giá hiện tại khoảng ~{last_px:,.2f} VNĐ.")
-        if path_pred is not None and hasattr(path_pred, "tolist"):
-            seq = path_pred.tolist()
-            if seq:
-                msg.append(
-                    "- Quỹ đạo dự kiến (3 bước kế tiếp): "
-                    + ", ".join(f"{p:,.2f} VNĐ" for p in seq)
-                    + " (tham khảo)."
-                )
-        msg.append("⚠️ Đây không phải khuyến nghị mua/bán.")
-        intraday_text = "\n".join(msg)
+        intraday_text = _format_intraday_pack(sym, pack)
 
         # Thêm phần dự báo cho phiên giao dịch kế tiếp
         ns_pack = next_session_pack
@@ -272,15 +356,13 @@ def format_forecast_text(
         return next_text
 
     # 3. Fallback cuối (trường hợp pack không đúng schema)
-    open_band = (
-        pack.get("bands", {}) or {}
-    ).get("OPEN_am", {}) or {}
-    px_mean = open_band.get("px_mean")
-    px_lo = open_band.get("px_lo")
-    px_hi = open_band.get("px_hi")
+    open_band = _valid_band((pack.get("bands", {}) or {}).get("OPEN_am"))
+    if open_band is None:
+        return f"⚠️ Gói dự báo của **{sym}** thiếu dải giá hợp lệ."
+    px_mean, px_lo, px_hi = open_band["px_mean"], open_band["px_lo"], open_band["px_hi"]
     open_dir = pack.get("open_direction", "dao động nhẹ")
     open_gap_pct = pack.get("open_gap_pct", 0.0)
-    conf = pack.get("open_confidence", "uncertain")
+    conf = _confidence_label(pack.get("open_confidence"))
     target_day = pack.get("target_day")
 
     msg = [
@@ -317,8 +399,11 @@ def get_full_forecast_answer(symbol: str) -> str:
         except Exception:
             next_pack = None
 
-    # Nếu ngoài phiên hoặc smart_predict lỗi → dùng luôn predict_next_session làm main_pack
-    if main_pack is None or main_pack.get("mode") != "in_session":
+    # Chỉ gọi lại predictor khi smart_predict thực sự lỗi/không trả schema hợp lệ.
+    # Pack next_session/out_of_session đã đủ dữ liệu để format, không gọi API hai lần.
+    if not isinstance(main_pack, dict) or main_pack.get("mode") not in (
+        "in_session", "next_session", "out_of_session"
+    ):
         try:
             main_pack = predict_next_session(symbol)
         except Exception:
@@ -356,29 +441,7 @@ def get_intraday_step_forecast_answer(symbol: str) -> str:
             f"Bạn có thể hỏi: \"dự đoán phiên tới của {sym}?\" để xem dự báo cho phiên giao dịch kế tiếp."
         )
 
-    # --- copy logic nội phiên ---
-    session = pack.get("session", "AM/PM")
-    dir_ = pack.get("next_step_dir") or "khó xác định"
-    conf = pack.get("step_confidence", "low")
-    last_px = pack.get("last_px", None)
-    path_pred = pack.get("path_pred", None)
-
-    msg = [
-        f"📈 Dự báo ngắn hạn nội phiên cho {sym} ({session}):",
-        f"- Xu hướng kế tiếp: **{dir_}** (độ tin cậy {conf})."
-    ]
-    if last_px:
-        msg.append(f"- Giá hiện tại khoảng ~{last_px:,.2f} VNĐ.")
-    if path_pred is not None and hasattr(path_pred, "tolist"):
-        seq = path_pred.tolist()
-        if seq:
-            msg.append(
-                "- Quỹ đạo dự kiến (3 bước kế tiếp): "
-                + ", ".join(f"{p:,.2f} VNĐ" for p in seq)
-                + " (tham khảo)."
-            )
-    msg.append("⚠️ Đây không phải khuyến nghị mua/bán.")
-    return "\n".join(msg)
+    return _format_intraday_pack(sym, pack)
 
 
 def get_next_session_forecast_answer(symbol: str) -> str:
