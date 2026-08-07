@@ -1,0 +1,37 @@
+{
+  "policy_status": "REJECTED",
+  "analysis_type": "fixed_no_tuning",
+  "overall": {
+    "rows": 625,
+    "actions": 212,
+    "buys": 91,
+    "sells": 121,
+    "no_trade": 413,
+    "action_coverage": 0.3392,
+    "action_direction_accuracy": 0.4056603773584906,
+    "accuracy_gap_vs_overall": 0.0,
+    "incorrect_actions": 126,
+    "buy_direction_accuracy": 0.43956043956043955,
+    "sell_direction_accuracy": 0.38016528925619836,
+    "buy_win_rate_after_cost": 0.4725274725274725,
+    "buy_mean_return_after_cost": 0.00148389363374167,
+    "no_trade_missed_move_rate": 0.7167070217917676,
+    "diagnostic_flag": false
+  },
+  "flag_rule": {
+    "min_actions": 10,
+    "accuracy_gap_lte": -0.05
+  },
+  "flagged_groups": [
+    {
+      "group_type": "symbol",
+      "group": "HPG",
+      "actions": 38,
+      "action_direction_accuracy": 0.34210526315789475,
+      "accuracy_gap_vs_overall": -0.06355511420059584,
+      "incorrect_actions": 25
+    }
+  ],
+  "recommended_action": "diagnose_only_do_not_change_policy_or_open_final_test",
+  "final_test_read": false
+}

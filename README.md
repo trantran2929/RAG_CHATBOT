@@ -39,23 +39,45 @@ This project is an **AI Financial Assistant** designed to:
 ```
 ## 🧠 Kiến trúc hệ thống
 ```mermaid
-    flowchart TD
-      A[User Query] --> B[Processor]
-      B --> C[Router]
-  
-      C -->|API| D[External APIs]
-      C -->|RAG| E[Embedder]
-  
-      E --> F[Vector DB]
-      F --> G[Retriever]
-      G --> H[Reranker]
-  
-      H --> I[Prompt Builder]
-      I --> J[LLM - Llama 3]
-  
-      J --> K[Response]
-      K --> L[Cache]
+flowchart TD
+    A[User Query] --> B[Processor]
+
+    subgraph P[Processor internals]
+        B1[Normalize and correct query]
+        B2[Rule-based intent detection]
+        B3{Confidence sufficient?}
+        B4[LLM semantic fallback]
+        B5[Finalize processed result]
+
+        B1 --> B2
+        B2 --> B3
+        B3 -->|Yes| B5
+        B3 -->|No| B4
+        B4 --> B5
+    end
+
+    B --> B1
+    B5 --> C[Router]
+
+    C -->|API| D[External APIs]
+    C -->|RAG| E[Embedder]
+
+    E --> F[Vector DB]
+    F --> G[Retriever]
+    G --> H[Reranker]
+    H --> I[Prompt Builder]
+    I --> J[LLM - Llama 3]
+
+    D --> K[Response]
+    J --> K
+    K --> L[Cache]
 ```
+
+`Processor` hoàn tất việc hiểu câu hỏi trước khi chuyển sang `Router`: chuẩn hóa
+văn bản, sửa lỗi miền tài chính, nhận diện intent/ticker/thời gian bằng rule và
+chỉ dùng LLM semantic fallback nội bộ khi độ tin cậy thấp. Semantic fallback
+không phải là một node độc lập trong pipeline. `Router` chỉ dựa trên kết quả đã
+xử lý để chọn nhánh API hoặc RAG.
       
 ## 🔥 Key Features
 

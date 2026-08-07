@@ -1,0 +1,26 @@
+{
+  "model": "xgboost",
+  "method": "OOF multinomial sigmoid",
+  "calibration_fit_split": "train_oof",
+  "evaluation_split": "validation",
+  "oof_rows": 985,
+  "raw": {
+    "accuracy": 0.3648,
+    "balanced_accuracy": 0.3609734589409386,
+    "macro_f1": 0.3596622084807908,
+    "log_loss": 1.1259683066822257,
+    "rows": 625,
+    "brier_multiclass": 0.6847182903364979,
+    "ece_10_bins": 0.09597838497161866
+  },
+  "calibrated": {
+    "accuracy": 0.3552,
+    "balanced_accuracy": 0.36645219966938897,
+    "macro_f1": 0.35400923208736046,
+    "log_loss": 1.095908765005881,
+    "rows": 625,
+    "brier_multiclass": 0.6650770644539157,
+    "ece_10_bins": 0.022709833192825334
+  },
+  "final_test_read": false
+}

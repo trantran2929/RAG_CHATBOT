@@ -1,0 +1,39 @@
+{
+  "analysis_type": "raw_compact_xgboost_argmax_oof_no_tuning",
+  "oof_rows": 985,
+  "folds": 4,
+  "overall": {
+    "rows": 985,
+    "actions": 644,
+    "buys": 275,
+    "sells": 369,
+    "no_trade": 341,
+    "action_coverage": 0.6538071065989848,
+    "action_direction_accuracy": 0.3416149068322981,
+    "accuracy_gap_vs_overall": 0.0,
+    "incorrect_actions": 424,
+    "buy_direction_accuracy": 0.3418181818181818,
+    "sell_direction_accuracy": 0.34146341463414637,
+    "buy_win_rate_after_cost": 0.3781818181818182,
+    "buy_mean_return_after_cost": -0.003927166845909382,
+    "no_trade_missed_move_rate": 0.49853372434017595,
+    "diagnostic_flag": false
+  },
+  "flag_rule": {
+    "min_actions": 20,
+    "accuracy_gap_lte": -0.05
+  },
+  "flagged_symbols": [
+    {
+      "symbol": "VCB",
+      "actions": 65,
+      "action_direction_accuracy": 0.18461538461538463,
+      "accuracy_gap_vs_overall": -0.1569995222169135,
+      "incorrect_actions": 53
+    }
+  ],
+  "calibrator_used": false,
+  "reason_calibrator_not_used": "would refit on and diagnose the same OOF probabilities",
+  "policy_changed": false,
+  "final_test_read": false
+}

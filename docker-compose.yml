@@ -86,6 +86,7 @@ services:
     volumes:
       - ./modules:/app/modules
       - ./models:/app/models
+      - ./tests:/app/tests
     restart: unless-stopped
 
 volumes:

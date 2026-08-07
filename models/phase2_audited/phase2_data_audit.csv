@@ -1,0 +1,6 @@
+symbol,first_date,last_date,row_count,duplicate_dates,missing_ohlcv,non_positive_price,negative_volume,absolute_return_over_10pct,near_limit_sessions,missing_columns
+FPT,2023-05-24,2026-07-31,797,0,0,0,0,0,9,
+HPG,2023-05-24,2026-07-31,797,0,0,0,0,0,8,
+PNJ,2023-05-24,2026-07-31,797,0,0,0,0,0,26,
+SHS,2023-05-24,2026-07-31,797,0,0,0,0,0,43,
+VCB,2023-05-24,2026-07-31,797,0,0,0,0,0,10,

@@ -1,0 +1,2 @@
+group,rows,actions,buys,sells,no_trade,action_coverage,action_direction_accuracy,accuracy_gap_vs_overall,incorrect_actions,buy_direction_accuracy,sell_direction_accuracy,buy_win_rate_after_cost,buy_mean_return_after_cost,no_trade_missed_move_rate,diagnostic_flag,group_type
+HPG,125,38,18,20,87,0.304,0.34210526315789475,-0.06355511420059584,25,0.3888888888888889,0.3,0.3888888888888889,-0.0018678687891099997,0.8160919540229885,True,symbol

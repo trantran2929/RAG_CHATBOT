@@ -2,7 +2,14 @@ import numpy as np
 import pandas as pd
 from typing import Tuple
 from statsmodels.tsa.statespace.sarimax import SARIMAX
+import warnings
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
+def _fit_is_valid(result) -> bool:
+    converged = bool(result.mle_retvals.get("converged", False))
+    finite_aic = np.isfinite(float(result.aic))
+    finite_params = np.isfinite(np.asarray(result.params, dtype=float)).all()
+    return converged and finite_aic and finite_params
 
 def _fit_one(
     y: pd.Series,
@@ -31,10 +38,21 @@ def _fit_one(
         concentrate_scale=True,
     )
 
-    try:
-        return model.fit(method="lbfgs", maxiter=2000, disp=False)
-    except Exception:
-        return model.fit(method="powell", maxiter=2000, disp=False)
+    errors = []
+    for method in ("lbfgs", "powell"):
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", ConvergenceWarning)
+                result = model.fit(method=method, maxiter=2000, disp=False)
+            if _fit_is_valid(result):
+                return result
+            else:
+                errors.append(f"{method}: not converged")
+        except Exception as exc:
+            errors.append(f"{method}: {exc}")
+
+    raise RuntimeError(
+        f"SARIMAX order={order}, trend={trend} failed: {'; '.join(errors)}")
 
 
 def arima_select_fit(
@@ -61,8 +79,8 @@ def arima_select_fit(
             for tr in trends:
                 try:
                     res = _fit_one(y, (p, d, q), tr, exog=exog)
-                    ic = res.aic
-                    if ic < best_ic:
+                    ic = float(res.aic)
+                    if _fit_is_valid(res) and ic < best_ic:
                         best, best_ic = res, ic
                         best_order, best_trend = (p, d, q), tr
                 except Exception:

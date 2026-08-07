@@ -1,0 +1,6 @@
+{
+  "model": "logistic",
+  "importance_type": "mean_absolute_standardized_coefficient",
+  "fit_split": "train",
+  "final_test_read": false
+}

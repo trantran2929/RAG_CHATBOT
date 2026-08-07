@@ -6,8 +6,6 @@ import os
 import re
 from typing import Any
 
-from modules.core.state import GlobalState
-
 
 ALLOWED_INTENTS = {
     "time", "weather", "stock", "market", "forecast", "rag", "greeting"
@@ -41,7 +39,7 @@ def _preserves_protected_tokens(original: str, corrected: str) -> bool:
     return _protected_tokens(original).issubset(_protected_tokens(corrected))
 
 
-def _should_parse(state: GlobalState) -> bool:
+def _should_parse(state) -> bool:
     if os.getenv("SEMANTIC_PARSER_ENABLED", "1") != "1":
         return False
     if getattr(state, "is_greeting", False):
@@ -74,10 +72,11 @@ forecast = dự báo cổ phiếu; rag = câu hỏi chung/không thuộc nhóm t
     ]
 
 
-def semantic_parse_node(state: GlobalState) -> GlobalState:
+def semantic_parse_fallback(state) -> dict | None:
+    """Return a validated LLM parse when Processor rules are uncertain."""
+    state.semantic_parser_used = False
     if not _should_parse(state):
-        state.semantic_parser_used = False
-        return state
+        return None
 
     query = getattr(state, "corrected_query", "") or state.user_query
     key = _cache_key(query)
@@ -114,6 +113,10 @@ def semantic_parse_node(state: GlobalState) -> GlobalState:
         if not _preserves_protected_tokens(state.user_query, corrected):
             raise ValueError("Semantic correction changed a protected token")
 
+        parsed["intent"] = intent
+        parsed["confidence"] = confidence
+        parsed["corrected_query"] = corrected
+
         try:
             redis_services.client.set(
                 key,
@@ -123,19 +126,8 @@ def semantic_parse_node(state: GlobalState) -> GlobalState:
         except Exception:
             pass
 
-        state.intent = intent
-        state.intent_confidence = confidence
-        state.corrected_query = corrected
-        tickers = parsed.get("tickers") or []
-        if tickers:
-            state.tickers = sorted({str(t).upper() for t in tickers if str(t).strip()})
-        state.semantic_parse = parsed
-        state.semantic_parser_used = True
-        state.add_debug("semantic_parser", "applied")
-        state.add_debug("semantic_parse", parsed)
+        return parsed
     except Exception as exc:
-        state.semantic_parser_used = False
         state.add_debug("semantic_parser", "fallback")
         state.add_debug("semantic_parser_error", str(exc))
-
-    return state
+        return None

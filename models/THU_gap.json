@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "symbol": "THU",
   "order": [
     1,
@@ -45,36 +45,39 @@
       "sd": 1.0
     },
     "ret_lag1": {
-      "mu": 0.0014591488657117236,
-      "sd": 0.04359529308737123
+      "mu": 0.001469917492026939,
+      "sd": 0.043756277684329055
     },
     "ret_lag2": {
-      "mu": 0.0027292023934976733,
-      "sd": 0.05943706303462014
+      "mu": 0.0027597974778936127,
+      "sd": 0.0596555947183255
     },
     "ret_lag5": {
-      "mu": 0.009079052218211424,
-      "sd": 0.09042602712385756
+      "mu": 0.009166963032252128,
+      "sd": 0.0907544871641876
     }
   },
-  "train_len": 273,
-  "timestamp": "23-07-2026 13:35:13",
+  "train_len": 271,
+  "timestamp": "25-07-2026 15:29:48",
   "last_train_date": "2026-06-12",
-  "target": "gap_ret",
+  "target": "next_session_close_to_close_log_return",
+  "signal_timing": "after_close_t_for_session_t_plus_1",
+  "forecast_target_date": "2026-06-15",
   "add_index": [
     "VNINDEX",
     "VN30"
   ],
-  "aic": -914.9940879374702,
-  "rmse_in_sample": 0.04314498897795136,
-  "mae_in_sample": 0.01249694321822828,
+  "aic": -906.1120099879133,
+  "rmse_in_sample": 0.04330388574997567,
+  "mae_in_sample": 0.012588644834385761,
   "last_close": 10500.0,
-  "ret_hat_next": 0.036862347540497206,
-  "next_price_est": 10894.276991560053,
+  "ret_hat_next": 0.01786164440210866,
+  "next_price_est": 10689.232234663199,
   "holdout": {
-    "rmse": 0.052833354133504866,
-    "mae": 0.015420560070140435,
+    "rmse": 0.05374509037303556,
+    "mae": 0.018711339508918817,
     "directional_accuracy": 0.1,
-    "test_size": 20
+    "test_size": 20,
+    "method": "expanding_window_sarimax_exog"
   }
 }

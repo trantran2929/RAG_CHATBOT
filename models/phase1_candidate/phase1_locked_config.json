@@ -1,0 +1,14 @@
+{
+  "validation_days": 125,
+  "final_test_days": 125,
+  "round_trip_cost_bps": 35.0,
+  "signal_buffer_bps": 15.0,
+  "shock_threshold": 0.05,
+  "volatility_percentile": 0.75,
+  "fitted_volatility_threshold": 0.007999780721527764,
+  "cooldown_sessions": 1,
+  "use_bear_filter": true,
+  "use_ma20_filter": true,
+  "use_volatility_filter": true,
+  "use_shock_filter": true
+}

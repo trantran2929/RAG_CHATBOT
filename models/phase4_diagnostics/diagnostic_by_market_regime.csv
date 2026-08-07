@@ -1,0 +1,3 @@
+market_regime,rows,actions,buys,sells,no_trade,action_coverage,action_direction_accuracy,accuracy_gap_vs_overall,incorrect_actions,buy_direction_accuracy,sell_direction_accuracy,buy_win_rate_after_cost,buy_mean_return_after_cost,no_trade_missed_move_rate,diagnostic_flag
+BULL,555,192,80,112,363,0.34594594594594597,0.40625,0.000589622641509413,114,0.4375,0.38392857142857145,0.4625,0.0017303927455414997,0.71900826446281,False
+SIDEWAYS,70,20,11,9,50,0.2857142857142857,0.4,-0.005660377358490565,12,0.45454545454545453,0.3333333333333333,0.5454545454545454,-0.00030882717934799985,0.7,False

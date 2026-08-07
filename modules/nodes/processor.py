@@ -10,6 +10,7 @@ from datetime import timedelta, datetime
 from vnstock import Listing
 from unidecode import unidecode
 from modules.api.time_api import normalize_time_query
+from modules.utils.semantic_parser import semantic_parse_fallback
 
 from collections import defaultdict
 from typing import List, Tuple
@@ -631,8 +632,39 @@ class Processor:
         state.time_filter = self.detect_time_filter(corrected_query)
         state.tickers = self.detect_tickers(corrected_query)
 
+        # Rule-based parsing is the primary path. The LLM parser is an internal
+        # Processor fallback, not a separate graph node.
+        semantic_result = semantic_parse_fallback(state)
+        if semantic_result is not None:
+            state.intent = semantic_result["intent"]
+            state.intent_confidence = semantic_result["confidence"]
+            state.corrected_query = semantic_result["corrected_query"]
+
+            # Rebuild every query-derived field after an LLM correction.
+            processed_query = self.normalize(state.corrected_query)
+            state.lang = self.detect_language(processed_query)
+            processed_query = self.map_synonyms(processed_query)
+            processed_query = self.remove_stopwords(processed_query)
+            if vocab:
+                processed_query = self.correct_typo(processed_query, vocab)
+            state.processed_query = processed_query
+            state.time_filter = self.detect_time_filter(state.corrected_query)
+
+            detected_tickers = set(self.detect_tickers(state.corrected_query))
+            llm_tickers = {
+                str(ticker).strip().upper()
+                for ticker in semantic_result.get("tickers", [])
+                if str(ticker).strip().upper() in self.valid_tickers
+                or str(ticker).strip().upper() in self.market_indices
+            }
+            state.tickers = sorted(detected_tickers | llm_tickers)
+            state.semantic_parse = semantic_result
+            state.semantic_parser_used = True
+            state.add_debug("semantic_parser", "applied")
+            state.add_debug("semantic_parse", semantic_result)
+
         # cache_key gợi ý: bản query chuẩn hóa
-        state.cache_key = f"qa::{processed_query[:100]}"
+        state.cache_key = f"qa::{state.processed_query[:100]}"
 
         # debug
         if getattr(state, "add_debug", None):
@@ -640,7 +672,7 @@ class Processor:
             state.add_debug("processor_tickers", state.tickers)
             state.add_debug("processor_lang", state.lang)
             state.add_debug("processor_cache_key", state.cache_key)
-            state.add_debug("processor_corrected_query", corrected_query)
+            state.add_debug("processor_corrected_query", state.corrected_query)
             state.add_debug("processor_corrections", corrections)
             state.add_debug("processor_intent_confidence", state.intent_confidence)
 

@@ -5,10 +5,10 @@ import unittest
 from unittest.mock import patch
 
 from modules.core.state import GlobalState
-from modules.nodes.semantic_parser import (
+from modules.utils.semantic_parser import (
     _extract_json,
     _preserves_protected_tokens,
-    semantic_parse_node,
+    semantic_parse_fallback,
 )
 
 
@@ -65,11 +65,10 @@ class SemanticParserTests(unittest.TestCase):
         )
 
         with patch.dict(sys.modules, {"modules.utils.services": services}):
-            result = semantic_parse_node(state)
+            result = semantic_parse_fallback(state)
 
-        self.assertTrue(result.semantic_parser_used)
-        self.assertEqual(result.intent, "forecast")
-        self.assertEqual(result.tickers, ["FPT"])
+        self.assertEqual(result["intent"], "forecast")
+        self.assertEqual(result["tickers"], ["FPT"])
         self.assertEqual(model.calls, 1)
 
     def test_clear_rule_intent_skips_llm(self):
@@ -79,8 +78,9 @@ class SemanticParserTests(unittest.TestCase):
             intent="time",
             intent_confidence=0.95,
         )
-        result = semantic_parse_node(state)
-        self.assertFalse(result.semantic_parser_used)
+        result = semantic_parse_fallback(state)
+        self.assertIsNone(result)
+        self.assertFalse(state.semantic_parser_used)
 
 
 if __name__ == "__main__":

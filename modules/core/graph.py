@@ -2,7 +2,6 @@ from langgraph.graph import StateGraph, START, END
 from .state import GlobalState
 from modules.nodes.cache import load_cache, save_cache
 from modules.nodes.processor import processor_query
-from modules.nodes.semantic_parser import semantic_parse_node
 from modules.nodes.embedder import embed_query
 from modules.nodes.vector_db import search_vector_db
 from modules.nodes.retriever import retrieve_documents
@@ -17,7 +16,6 @@ def build_graph():
 
     workflow.add_node("load_cache", load_cache)
     workflow.add_node("processor", processor_query)
-    workflow.add_node("semantic_parser", semantic_parse_node)
     workflow.add_node("router", route_intent)
     workflow.add_node("embedder", embed_query)
     workflow.add_node("vector_db", search_vector_db)
@@ -30,8 +28,7 @@ def build_graph():
 
     workflow.add_edge(START, "load_cache")
     workflow.add_edge("load_cache", "processor")
-    workflow.add_edge("processor", "semantic_parser")
-    workflow.add_edge("semantic_parser", "router")
+    workflow.add_edge("processor", "router")
     workflow.add_conditional_edges(
         "router", 
         lambda state: getattr(state, "route_to", "rag"),

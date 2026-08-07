@@ -1,0 +1,82 @@
+{
+  "target_counts_train_validation_only": [
+    {
+      "split": "train",
+      "target": "DOWN",
+      "rows": 577
+    },
+    {
+      "split": "train",
+      "target": "NO_TRADE",
+      "rows": 588
+    },
+    {
+      "split": "train",
+      "target": "UP",
+      "rows": 570
+    },
+    {
+      "split": "validation",
+      "target": "DOWN",
+      "rows": 245
+    },
+    {
+      "split": "validation",
+      "target": "NO_TRADE",
+      "rows": 164
+    },
+    {
+      "split": "validation",
+      "target": "UP",
+      "rows": 216
+    }
+  ],
+  "regime_counts_train_validation_only": [
+    {
+      "split": "train",
+      "market_regime": "BEAR",
+      "rows": 275
+    },
+    {
+      "split": "train",
+      "market_regime": "BULL",
+      "rows": 1140
+    },
+    {
+      "split": "train",
+      "market_regime": "SIDEWAYS",
+      "rows": 320
+    },
+    {
+      "split": "validation",
+      "market_regime": "BULL",
+      "rows": 555
+    },
+    {
+      "split": "validation",
+      "market_regime": "SIDEWAYS",
+      "rows": 70
+    }
+  ],
+  "date_ranges": [
+    {
+      "split": "final_test",
+      "min": "2026-01-28",
+      "max": "2026-07-31",
+      "count": 625
+    },
+    {
+      "split": "train",
+      "min": "2024-03-11",
+      "max": "2025-07-30",
+      "count": 1735
+    },
+    {
+      "split": "validation",
+      "min": "2025-07-31",
+      "max": "2026-01-27",
+      "count": 625
+    }
+  ],
+  "final_target_statistics_read": false
+}

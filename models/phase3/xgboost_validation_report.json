@@ -1,0 +1,93 @@
+{
+  "model": "xgboost",
+  "config": {
+    "random_state": 42,
+    "cv_folds": 4,
+    "min_train_dates": 150,
+    "logistic_c": 0.25,
+    "xgb_n_estimators": 250,
+    "xgb_max_depth": 3,
+    "xgb_learning_rate": 0.03,
+    "xgb_subsample": 0.8,
+    "xgb_colsample_bytree": 0.8
+  },
+  "feature_columns": [
+    "ret_1",
+    "ret_2",
+    "ret_5",
+    "ret_10",
+    "ret_20",
+    "range_1",
+    "intraday_return",
+    "overnight_gap",
+    "volatility_5",
+    "volatility_10",
+    "volatility_20",
+    "distance_ma20",
+    "distance_ma50",
+    "distance_ma200",
+    "relative_volume_5",
+    "relative_volume_20",
+    "drawdown_20",
+    "drawdown_60",
+    "rsi_14",
+    "atr_14",
+    "vnindex_ret_1",
+    "vnindex_ret_5",
+    "vnindex_ret_20",
+    "vnindex_ret_60",
+    "vnindex_volatility_5",
+    "vnindex_volatility_20",
+    "vnindex_distance_ma20",
+    "vnindex_distance_ma200",
+    "relative_strength_5",
+    "relative_strength_20",
+    "rolling_beta_60",
+    "rolling_correlation_60",
+    "market_regime"
+  ],
+  "cv_folds": [
+    {
+      "fold": 1,
+      "accuracy": 0.444,
+      "balanced_accuracy": 0.41174603174603175,
+      "macro_f1": 0.39605813290023817,
+      "log_loss": 1.0886088001244456,
+      "rows": 250
+    },
+    {
+      "fold": 2,
+      "accuracy": 0.40816326530612246,
+      "balanced_accuracy": 0.37923750967229225,
+      "macro_f1": 0.3642714916600267,
+      "log_loss": 1.0832217164586038,
+      "rows": 245
+    },
+    {
+      "fold": 3,
+      "accuracy": 0.3469387755102041,
+      "balanced_accuracy": 0.3317141683307377,
+      "macro_f1": 0.3142823367442605,
+      "log_loss": 1.1771648246635888,
+      "rows": 245
+    },
+    {
+      "fold": 4,
+      "accuracy": 0.3224489795918367,
+      "balanced_accuracy": 0.36242030965391625,
+      "macro_f1": 0.30014313172207907,
+      "log_loss": 1.2563023786030676,
+      "rows": 245
+    }
+  ],
+  "validation": {
+    "accuracy": 0.3648,
+    "balanced_accuracy": 0.3609734589409386,
+    "macro_f1": 0.3596622084807908,
+    "log_loss": 1.1259683066822257,
+    "rows": 625,
+    "majority_accuracy": 0.2624
+  },
+  "final_test_read": false,
+  "dataset_sha256": "bd1883efbc5981386d6eb4ce11bb0ab25e19092ad754efd5e589060d286c0c0a"
+}

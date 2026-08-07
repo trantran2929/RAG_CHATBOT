@@ -1,0 +1,26 @@
+{
+  "model": "logistic",
+  "method": "OOF multinomial sigmoid",
+  "calibration_fit_split": "train_oof",
+  "evaluation_split": "validation",
+  "oof_rows": 985,
+  "raw": {
+    "accuracy": 0.3952,
+    "balanced_accuracy": 0.35704852853517194,
+    "macro_f1": 0.31698756704932946,
+    "log_loss": 1.223414931565785,
+    "rows": 625,
+    "brier_multiclass": 0.7179851544626943,
+    "ece_10_bins": 0.1500796617806503
+  },
+  "calibrated": {
+    "accuracy": 0.352,
+    "balanced_accuracy": 0.3578718298520854,
+    "macro_f1": 0.30261210936946886,
+    "log_loss": 1.0874243527726666,
+    "rows": 625,
+    "brier_multiclass": 0.6597109002086144,
+    "ece_10_bins": 0.02843766617377027
+  },
+  "final_test_read": false
+}

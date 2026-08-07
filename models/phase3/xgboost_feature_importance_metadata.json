@@ -1,0 +1,6 @@
+{
+  "model": "xgboost",
+  "importance_type": "xgboost_gain_weight",
+  "fit_split": "train",
+  "final_test_read": false
+}

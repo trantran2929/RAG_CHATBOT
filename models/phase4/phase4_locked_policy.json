@@ -1,0 +1,53 @@
+{
+  "model": "compact_xgboost_calibrated",
+  "calibration_method": "train_oof_multinomial_sigmoid",
+  "calibration_oof_rows": 985,
+  "selected_policy": {
+    "threshold": 0.36,
+    "margin": 0.0,
+    "rows": 625,
+    "actions": 212,
+    "buys": 91,
+    "sells": 121,
+    "action_coverage": 0.3392,
+    "action_direction_accuracy": 0.4056603773584906,
+    "wilson_lower_bound": 0.34181102789308393,
+    "buy_win_rate_after_cost": 0.4725274725274725,
+    "long_only_net_return": 0.026512068029103775,
+    "long_only_sharpe": 0.9334288337212175,
+    "long_only_max_drawdown": -0.028763037219646015,
+    "eligible": true
+  },
+  "grid": {
+    "thresholds": [
+      0.36,
+      0.4,
+      0.44,
+      0.48
+    ],
+    "margins": [
+      0.0,
+      0.03,
+      0.06
+    ],
+    "min_actions": 30,
+    "min_side_actions": 10
+  },
+  "selection_metric": "wilson_lower_bound_action_direction_accuracy",
+  "validation_status": "REJECTED",
+  "approved_for_signal_use": false,
+  "rejection_reasons": [
+    "action_direction_accuracy_below_50pct",
+    "buy_win_rate_after_cost_below_50pct"
+  ],
+  "acceptance_gate": {
+    "min_action_direction_accuracy": 0.5,
+    "min_buy_win_rate_after_cost": 0.5
+  },
+  "sell_semantics": "directional_or_exit_only_no_short_pnl",
+  "round_trip_cost_bps_for_buy_report": 35.0,
+  "dataset_sha256": "bd1883efbc5981386d6eb4ce11bb0ab25e19092ad754efd5e589060d286c0c0a",
+  "calibrator_sha256": "193a4493d4bfd4327f2208adceb7547d0759f0a3c8d9c08b40e59b12cf1906e0",
+  "phase3_lock": "models/phase3/phase3_locked_config.json",
+  "final_test_read": false
+}
