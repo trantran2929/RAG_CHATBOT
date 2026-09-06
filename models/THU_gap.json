@@ -15,6 +15,18 @@
     "neu_count",
     "mean_sent",
     "sum_sent",
+    "idx_VNINDEX_news_count",
+    "idx_VNINDEX_pos_count",
+    "idx_VNINDEX_neg_count",
+    "idx_VNINDEX_neu_count",
+    "idx_VNINDEX_mean_sent",
+    "idx_VNINDEX_sum_sent",
+    "idx_VN30_news_count",
+    "idx_VN30_pos_count",
+    "idx_VN30_neg_count",
+    "idx_VN30_neu_count",
+    "idx_VN30_mean_sent",
+    "idx_VN30_sum_sent",
     "ret_lag1",
     "ret_lag2",
     "ret_lag5"
@@ -44,39 +56,87 @@
       "mu": 0.0,
       "sd": 1.0
     },
+    "idx_VNINDEX_news_count": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VNINDEX_pos_count": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VNINDEX_neg_count": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VNINDEX_neu_count": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VNINDEX_mean_sent": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VNINDEX_sum_sent": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VN30_news_count": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VN30_pos_count": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VN30_neg_count": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VN30_neu_count": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VN30_mean_sent": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
+    "idx_VN30_sum_sent": {
+      "mu": 0.0,
+      "sd": 1.0
+    },
     "ret_lag1": {
-      "mu": 0.001469917492026939,
-      "sd": 0.043756277684329055
+      "mu": 0.0014645133836003693,
+      "sd": 0.04367556287048841
     },
     "ret_lag2": {
-      "mu": 0.0027597974778936127,
-      "sd": 0.0596555947183255
+      "mu": 0.002929026767200739,
+      "sd": 0.05961080104383416
     },
     "ret_lag5": {
-      "mu": 0.009166963032252128,
-      "sd": 0.0907544871641876
+      "mu": 0.008462961121126367,
+      "sd": 0.09132794035515873
     }
   },
-  "train_len": 271,
-  "timestamp": "25-07-2026 15:29:48",
-  "last_train_date": "2026-06-12",
+  "train_len": 272,
+  "timestamp": "07-08-2026 16:39:28",
+  "last_train_date": "2026-08-07",
   "target": "next_session_close_to_close_log_return",
   "signal_timing": "after_close_t_for_session_t_plus_1",
-  "forecast_target_date": "2026-06-15",
+  "forecast_target_date": "2026-08-10",
   "add_index": [
     "VNINDEX",
     "VN30"
   ],
-  "aic": -906.1120099879133,
-  "rmse_in_sample": 0.04330388574997567,
-  "mae_in_sample": 0.012588644834385761,
-  "last_close": 10500.0,
-  "ret_hat_next": 0.01786164440210866,
-  "next_price_est": 10689.232234663199,
+  "aic": -850.3806931710246,
+  "rmse_in_sample": 0.04620725749349031,
+  "mae_in_sample": 0.014340637032856747,
+  "last_close": 14000.0,
+  "ret_hat_next": -0.003243117797962953,
+  "next_price_est": 13954.669895993185,
   "holdout": {
-    "rmse": 0.05374509037303556,
-    "mae": 0.018711339508918817,
-    "directional_accuracy": 0.1,
+    "rmse": 0.08078510524292058,
+    "mae": 0.03172597246925454,
+    "directional_accuracy": 0.15,
     "test_size": 20,
     "method": "expanding_window_sarimax_exog"
   }
